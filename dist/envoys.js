@@ -1,10 +1,13 @@
 import * as THREE from './vendor/three.module.js';
 
-export const BLACK = 3, WHITE = 4;
+// 3、4 号是小怪，阴差排在后面，战斗里 type>=BLACK 即为阴差。
+export const PAPER = 3, FLYER = 4, BLACK = 5, WHITE = 6;
 export const foes = [
   {model:'corpse',name:'跳僵',hp:70,speed:1.57},
   {model:'corpse',name:'青面毛僵',hp:100,speed:1.85},
   {model:'corpse',name:'铁甲尸魁',hp:290,speed:1.29},
+  {model:'paper',name:'纸人',hp:38,speed:3.1},
+  {model:'flyer',name:'飞头蛮',hp:80,speed:3.4},
   {model:'black',name:'黑无常',hp:235,speed:1.64},
   {model:'white',name:'白无常',hp:194,speed:1.48}
 ];

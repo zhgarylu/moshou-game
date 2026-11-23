@@ -8,7 +8,8 @@ import {actionTiming} from './action-timing.js';
 
 import {disciplines,sevenStars,stickyRice} from './disciplines.js';
 import {relicTimes,freshMods,drawRelics} from './relics.js';
-import {BLACK,WHITE,foes,chargeLength,chargeHalfWidth,prisonRadius,makeEnvoySigns} from './envoys.js';
+import {makePaperActor,makeFlyerActor} from './minions.js';
+import {PAPER,FLYER,BLACK,WHITE,foes,chargeLength,chargeHalfWidth,prisonRadius,makeEnvoySigns} from './envoys.js';
 
 const clamp=THREE.MathUtils.clamp;
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
@@ -19,8 +20,13 @@ const waves=[
   [0,BLACK,-2.8,-1.5],[0,0,3,-4],[4,0,-7,-5],[8,WHITE,4,-4],[11,0,-6,0],[16,0,4,-8],[20,0,-6,-8],
   [24,1,-6,-5],[24,0,7,-6],[29,0,10,-1],[34,0,-10,1],[35,WHITE,-5,-6],[39,1,1,-9],
   [44,0,10,-7],[48,BLACK,5,-3],[50,2,0,-10],[54,0,-7,-6],[58,1,-10,2],[62,0,9,-5],
-  [66,1,3,-9],[70,2,-4,-8],[72,BLACK,-4,-3],[72,WHITE,4,-5],[77,0,-7,1],[81,1,7,-2],[85,0,-8,-7]
+  [66,1,3,-9],[70,2,-4,-8],
+  // 纸人三只一队从院门两侧涌入；飞头蛮从屋檐上方掠下。
+  [6,PAPER,-9,-9],[6.4,PAPER,-8,-10],[6.8,PAPER,-10,-8],[14,FLYER,8,-10],[19,PAPER,9,-9],[19.4,PAPER,8,-10],[19.8,PAPER,10,-8],
+  [33,PAPER,-3,-11],[33.4,PAPER,0,-11],[33.8,PAPER,3,-11],[40,FLYER,-9,-9],[46,PAPER,-10,-3],[46.4,PAPER,-10,-5],[46.8,PAPER,-10,-1],
+  [55,FLYER,9,-6],[61,FLYER,-8,-10],[63,PAPER,9,-2],[63.4,PAPER,9,-4],[63.8,PAPER,9,0],[75,FLYER,0,-11],[79,PAPER,-4,-11],[79.4,PAPER,0,-11],[79.8,PAPER,4,-11],[72,BLACK,-4,-3],[72,WHITE,4,-5],[77,0,-7,1],[81,1,7,-2],[85,0,-8,-7]
 ];
+waves.sort((a,b)=>a[0]-b[0]);
 const slowMotionMedia=matchMedia('(prefers-reduced-motion: reduce)');
 function angleDelta(from,to){return Math.atan2(Math.sin(to-from),Math.cos(to-from));}
 function turn(obj,angle,dt,rate=11){
@@ -99,16 +105,17 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     let e=pool[type].pop();
     const kind=foes[type];
     if(!e){
-      const actor=makeBattleActor(kind.model,type);
+      const actor=kind.model==='paper'?makePaperActor():kind.model==='flyer'?makeFlyerActor():makeBattleActor(kind.model,type);
       const ring=new THREE.Mesh(shape,new THREE.MeshBasicMaterial({color:0xff6c3c,transparent:true,opacity:.6,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}));
       scene.add(ring);
       e={actor,ring,type,sign:type>=BLACK?enemySigns.create(type):null,origin:V(),anchor:V(),attackDir:V(),motion:{}};
     }
     Object.assign(e,{hp:kind.hp,max:kind.hp,speed:kind.speed,seed:Math.random()*5,marked:0,slow:0,stagger:0,dead:0,stage:'chase',clock:0,
-      wait:type===WHITE?2.5:type===BLACK?2.2:.7,wind:type===WHITE?1.35:type===BLACK?1.12:type===2?.91:.73,
-      reach:type===WHITE?8.9:type===BLACK?6.8:type===2?3.3:2.3,hitOnce:false,staggerSpan:0});
+      wait:type===WHITE?2.5:type===BLACK?2.2:type===FLYER?2.6:type===PAPER?.4:.7,wind:type===WHITE?1.35:type===BLACK?1.12:type===FLYER?.85:type===PAPER?.42:type===2?.91:.73,
+      reach:type===WHITE?8.9:type===BLACK?6.8:type===FLYER?1.5:type===PAPER?1.6:type===2?3.3:2.3,orbit:Math.random()*Math.PI*2,hitOnce:false,staggerSpan:0});
     if(state==='play'&&type===BLACK)audio.voice('black.enter',{channel:'black',gain:.9});
     if(state==='play'&&type===WHITE)audio.voice('white.enter',{channel:'white',gain:.9});
+    if(type===FLYER)e.actor.lift=2.4;
     const p=e.actor.root.position;p.set(x,0,z);e.actor.root.scale.setScalar(type===2?1.18:1);e.actor.root.rotation.y=Math.atan2(pos.x-x,pos.z-z);
     e.ring.visible=false;e.actor.resetMotion?.();e.actor.animate('idle',t+e.seed,1);scene.add(e.actor.root);enemies.push(e);
   }
@@ -117,7 +124,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     if(prepared.has(classId))return;
     try {
       resetCamera();
-      for(const type of [0,BLACK,WHITE])spawn(type,type-2,0);
+      for(const type of [0,PAPER,FLYER,BLACK,WHITE])spawn(type,type-3,0);
       fx.prime(classId,renderer);
       await atmosphere.prepare(scene,cam);
       prepared.add(classId);
@@ -177,6 +184,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     }
     if(e.hp===0){
       e.dead=.01;kills++;
+      if(e.type===PAPER){fx.hit(e.actor.root.position,0xf3ecdc);fx.hit(e.actor.root.position,0xd9b45c);}
       if(e.type>=BLACK){
         envoyKills++;
         const recovery=Math.min(12,100-hp);
@@ -373,6 +381,31 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     if(step)p.addScaledVector(tmp,step*e.speed*dt);
     e.pose=step?'walk':'idle';
   }
+  // 飞头蛮：在玩家头顶盘旋，地上亮起俯冲圈后直扑下来，再拉回空中。
+  function flyerStep(e,dt,dist){
+    const p=e.actor.root.position,actor=e.actor;
+    if(e.stage==='wind'){
+      const u=Math.min(1,e.clock/e.wind);e.pose='cast';e.progress=u;
+      e.ring.visible=true;e.ring.position.set(e.anchor.x,.06,e.anchor.z);e.ring.scale.setScalar(e.reach*(.7+.3*u));e.ring.material.opacity=.4+.5*u;
+      tmp.copy(e.anchor).sub(p);turn(actor.root,Math.atan2(tmp.x,tmp.z),dt);
+      if(u>=1){e.stage='dive';e.clock=0;e.ring.visible=false;e.hitOnce=false;e.origin.copy(p);e.attackDir.copy(e.anchor).sub(p).setY(0);}
+      return;
+    }
+    if(e.stage==='dive'){
+      const u=Math.min(1,e.clock/.55);e.pose='attack';e.progress=u;
+      p.copy(e.origin).addScaledVector(e.attackDir,u*1.35);
+      actor.lift=2.4-1.7*Math.sin(Math.PI*Math.min(1,u*1.1));
+      if(!e.hitOnce&&u>.35&&u<.75&&p.distanceTo(pos)<e.reach){e.hitOnce=true;hurtPlayer(14);}
+      if(u>=1){e.stage='chase';e.wait=2.4;e.clock=0;actor.lift=2.4;}
+      return;
+    }
+    // 盘旋：绕着玩家转圈，距离 4.5 米。
+    actor.lift+=(2.4-actor.lift)*(1-Math.exp(-dt*3));
+    e.orbit+=dt*.9;tmp.set(pos.x+Math.cos(e.orbit)*4.5,0,pos.z+Math.sin(e.orbit)*4.5).sub(p);
+    const d=tmp.length();if(d>.05)p.addScaledVector(tmp,Math.min(1,e.speed*dt/d));
+    tmp.copy(pos).sub(p);turn(actor.root,Math.atan2(tmp.x,tmp.z),dt);e.pose='walk';
+    if(e.wait<=0&&dist<7.5){e.stage='wind';e.clock=0;e.anchor.copy(pos);}
+  }
   function enemiesStep(dt){
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i],p=e.actor.root.position;
@@ -386,14 +419,16 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       const dist=p.distanceTo(pos),type=e.type;
       if(type>=BLACK){
         envoyStep(e,dt*pace,dist);
+      }else if(type===FLYER){
+        flyerStep(e,dt*pace,dist);
       }else if(e.stage==='wind'){
         const progress=Math.min(1,e.clock/e.wind);e.ring.visible=true;e.ring.position.set(e.anchor.x,.06,e.anchor.z);e.ring.scale.setScalar(e.reach*(.8+progress*.2));e.ring.material.opacity=.36+.5*progress;
         e.pose='cast';e.progress=progress;
         if(progress>=1){e.stage='leap';e.clock=0;e.ring.visible=false;e.hitOnce=false;}
       }else if(e.stage==='leap'){
         const u=Math.min(1,e.clock/.33);p.addScaledVector(e.attackDir,.95*dt/.33);e.pose='attack';e.progress=u;
-        if(!e.hitOnce&&u>.38){e.hitOnce=true;if(pos.distanceTo(e.anchor)<e.reach+.2)hurtPlayer(type===2?24:type===1?16:11);}
-        if(u>=1){e.stage='chase';e.wait=type===2?1.5:1.14;e.clock=0;}
+        if(!e.hitOnce&&u>.38){e.hitOnce=true;if(pos.distanceTo(e.anchor)<e.reach+.2)hurtPlayer(type===2?24:type===1?16:type===PAPER?7:11);}
+        if(u>=1){e.stage='chase';e.wait=type===2?1.5:type===PAPER?.8:1.14;e.clock=0;}
       }else{
         tmp.copy(pos).sub(p);if(dist>.01)tmp.multiplyScalar(1/dist);turn(e.actor.root,Math.atan2(tmp.x,tmp.z),dt);
         if(dist<e.reach+.3&&e.wait<=0){
@@ -475,8 +510,8 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     court.setSurge(surge*.4);court.update(dt,t);punch.intensity=surge*.7;spellLight.intensity=focusLife>0?(focusSpan>4?12:13)+surge*(focusSpan>4?16:24):0;audio.update();
     cameraStep(dt);primary=pickPrimary();
     groundMarker.visible=!!hoverPoint&&(keys.has('ShiftLeft')||keys.has('ShiftRight'));if(groundMarker.visible)groundMarker.position.set(hoverPoint.x,.067,hoverPoint.z);
-    if(primary){const p=primary.actor.root.position;reticle.visible=true;reticle.position.set(p.x,.049,p.z);reticle.scale.setScalar(primary.type===2?1.05:.7);
-      project.copy(p);project.y+=primary.type===2?3.05:primary.type===WHITE?2.83:primary.type===BLACK?2.61:2.35;project.project(cam);
+    if(primary){const p=primary.actor.root.position;reticle.visible=true;reticle.position.set(p.x,.049,p.z);reticle.scale.setScalar(primary.type===2?1.05:primary.type===PAPER?.6:.7);
+      project.copy(p);project.y+=primary.type===FLYER?3.2:primary.type===PAPER?2.15:primary.type===2?3.05:primary.type===WHITE?2.83:primary.type===BLACK?2.61:2.35;project.project(cam);
       const visible=project.z>0&&project.z<1&&Math.abs(project.x)<.94&&Math.abs(project.y)<.80;
       ui.target(visible?{x:(project.x*.5+.5)*100,y:(.5-project.y*.5)*100,label:foes[primary.type].name+(primary.marked>0?' · '+spec.markTag:''),hp:primary.hp/primary.max}:null);
     }else{reticle.visible=false;ui.target(null);}
