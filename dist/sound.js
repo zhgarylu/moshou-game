@@ -65,6 +65,10 @@ export function makeSound(){
     if(k==='soul'){tone(580,382,.65,'sine',.16*p);tone(801,582,.82,'triangle',.09*p,.08);}
     if(k==='hurt'){tone(100,39,.22,'triangle',.23);noise(.19,640,.28);}
     if(k==='dodge')noise(.24,3500,.35);
+    if(k==='devour'){tone(62,28,1.4,'sawtooth',.32*p);noise(1.1,520,.5*p,0,60);tone(140,40,.9,'square',.12*p,.15);}
+    if(k==='inkSnap'){tone(210,90,.5,'triangle',.4*p);noise(.18,5200,.4*p);tone(105,100,1.1,'sine',.22*p,.02);}
+    if(k==='mirror'){[1,1.5,2,3].forEach((r,i)=>tone(520*r,560*r,1.2,'sine',.14*p/(i+1),i*.03));noise(.4,9000,.2*p,0,4000);}
+    if(k==='possess'){tone(98,196,.8,'sine',.35*p);[1,1.25,1.5].forEach((r,i)=>tone(392*r,392*r,1,'triangle',.1*p,.1+i*.08));}
     if(k==='rice'){noise(.5,7800,.3*p,0,2400);[0,.05,.11,.18].forEach(d=>noise(.06,9000,.12*p,d,3000));}
     if(k==='step')noise(.07,370,.1);
     if(k==='win'){[0,2,3,4].forEach((n,i)=>tone(notes[n],notes[n],1,'triangle',.20,.18*i));}

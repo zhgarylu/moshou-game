@@ -44,3 +44,17 @@ export const disciplines = {
     summon:invocation, priest, rice, markTag:'印', speed:4.3, light:0xffbc72,
   }
 };
+
+// 请神选招：按 Q / E 后战斗暂停，四选一。key 对应 spells/rites 里的演出与 combat 里的效果。
+export const judgeMoves=[
+  {key:'slash',name:'斩妖剑',tag:'清场',icon:'summon',desc:'钟馗挥剑斜劈，7.3 米内造成 235 点伤害并镇住敌人。'},
+  {key:'devour',name:'啖鬼',tag:'处决',icon:'devour',desc:'钟馗抓起场上最强的一名敌人一口吞下，必定镇伏，并为你回复 20 点生命。'},
+  {key:'brush',name:'朱笔勾名',tag:'克无常',icon:'brush',desc:'展开生死簿，朱笔勾去黑白无常之名：削去其三成五生命，6 秒内不能施法拘魂。'},
+  {key:'ghosts',name:'五鬼听令',tag:'召唤',icon:'ghosts',desc:'五方小鬼自朱门蹦出，10 秒内追打最近的敌人。'},
+];
+export const priestMoves=[
+  {key:'stars',name:'七星伏魔',tag:'清场',icon:'ritual',desc:'踏罡摇铃，北斗七星落阵：先造成 64 点伤害定身，朱符再砸下 260 点伤害并镇敌 3 秒。'},
+  {key:'ink',name:'墨斗封尸',tag:'控场',icon:'ink',desc:'弹出三道墨斗线横贯院落。6 秒内，碰线的僵尸与纸人被粘住 2.5 秒并受伤，阴差行动迟缓。'},
+  {key:'mirror',name:'八卦照妖',tag:'克无常',icon:'mirror',desc:'八卦镜照出一道金光：打断阴差施法、挣断魂链，被照到的敌人 6 秒内受到的伤害提高一半。'},
+  {key:'possess',name:'茅山神打',tag:'附身',icon:'possess',desc:'道长请神附在你身上 8 秒：全部伤害提高四成，每次普攻都会引出一道掌心雷。'},
+];

@@ -78,11 +78,12 @@ loreButtons.forEach(b=>b.onclick=()=>{
   drawRune($('detail-rune'),ability.icon);
 });
 let relicPick=null;
-function hideRelic(){$('relic-pick').hidden=true;relicPick=null;}
-function showRelic(choices,round,onPick){
+function hideRelic(){$('relic-pick').hidden=true;relicPick=null;pickCancel=null;}
+let pickCancel=null;
+function showChoice({kicker,title,hint},choices,onPick,cancel=null){
   const box=$('relic-cards');box.replaceChildren();
-  $('relic-kicker').textContent='香案显灵 · 第 '+['一','二','三'][round-1]+' 次';
-  relicPick=i=>{const r=choices[i];if(!r)return;hideRelic();onPick(r);};
+  $('relic-kicker').textContent=kicker;$('relic-title').textContent=title;document.querySelector('.relic-head p').textContent=hint;
+  pickCancel=cancel;relicPick=i=>{const r=choices[i];if(!r)return;hideRelic();onPick(r);};
   choices.forEach((r,i)=>{
     const b=document.createElement('button');b.className='relic-card';
     b.innerHTML='<kbd>'+(i+1)+'</kbd><canvas width="80" height="80"></canvas><i></i><h3></h3><p></p>';
@@ -90,6 +91,12 @@ function showRelic(choices,round,onPick){
     drawRune(b.querySelector('canvas'),r.icon);b.onclick=()=>relicPick?.(i);box.append(b);
   });
   $('relic-pick').hidden=false;box.firstElementChild?.focus({preventScroll:true});
+}
+function showRelic(choices,round,onPick){
+  showChoice({kicker:'香案显灵 · 第 '+['一','二','三'][round-1]+' 次',title:'请一件法宝',hint:'按 1 / 2 / 3 或点击卡片选择'},choices,onPick);
+}
+function showMoves({kicker,title,moves},onPick){
+  showChoice({kicker,title,hint:'按 1 – 4 或点击卡片出招 · Esc 收回'},moves,onPick,()=>{hideRelic();onPick(null);});
 }
 function end(s){
   hideRelic();
@@ -113,7 +120,7 @@ const ui={
   damage(v){$('hurt').style.opacity=Math.min(.85,v);},
   target(obj){const tag=$('target-tag');if(!obj){if(visibleTarget)tag.hidden=true;visibleTarget=false;return;}visibleTarget=true;tag.hidden=false;tag.style.left=obj.x+'%';tag.style.top=obj.y+'%';tag.querySelector('span').textContent=obj.label;tag.style.setProperty('--hp',(obj.hp*100)+'%');},
   banner(title,sub){const e=$('cast-banner');e.classList.toggle('show',!!title);e.querySelector('small').textContent=sub;e.querySelector('b').textContent=title;},
-  relic:showRelic,
+  relic:showRelic,choose:showMoves,
   notice(msg){$('notice').textContent=msg;$('notice').classList.toggle('show',!!msg);},end
 };
 async function start(){
@@ -131,7 +138,7 @@ window.addEventListener('keydown',e=>{
   if(e.code==='KeyM'&&!e.repeat){toggleSound();return;}
   if(!modal.hidden){if(e.code==='Escape'){e.preventDefault();if(dialogKind==='pause'||(dialogKind==='help'&&game?.state==='paused'))continueGame();else if(dialogKind!=='result')hideDialog();}
     if(e.key==='Tab'){const things=[...modal.querySelectorAll('button')];if(e.shiftKey&&document.activeElement===things[0]){e.preventDefault();things.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===things.at(-1)){e.preventDefault();things[0].focus();}}return;}
-  if(relicPick){const n=['Digit1','Digit2','Digit3'].indexOf(e.code);if(n>=0){e.preventDefault();relicPick(n);}return;}
+  if(relicPick){const n=['Digit1','Digit2','Digit3','Digit4'].indexOf(e.code);if(n>=0){e.preventDefault();relicPick(n);}else if(e.code==='Escape'&&pickCancel){e.preventDefault();pickCancel();}return;}
   if(game?.state!=='play')return;
   if(e.code==='Escape'){e.preventDefault();pauseMenu();return;}
   if(moveKeys.has(e.code)){e.preventDefault();game.keys.add(e.code);}

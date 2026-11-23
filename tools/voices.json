@@ -31,9 +31,15 @@
     "ward.hurt":        {"rate": 10,  "text": "顶住！"},
     "judge.arrive":     {"rate": 20,  "fx": "hell3", "instruct": "地狱霸主降临人间，声音低沉而有威压，暴怒咆哮，震慑群鬼", "text": "何方妖孽！"},
     "judge.slash":      {"rate": -5,  "fx": "hell3", "instruct": "地狱霸主降临人间，声音低沉而有威压，暴怒咆哮，震慑群鬼", "text": "斩！"},
-    "priest.invoke":    {"rate": 0,   "fx": "roar", "instruct": "坚毅威严，声如洪钟，运足中气大声喝令，要把恶鬼吓退", "text": "北斗七星，伏魔镇邪。敕！"},
+    "priest.stars":    {"rate": 0,   "fx": "roar", "instruct": "坚毅威严，声如洪钟，运足中气大声喝令，要把恶鬼吓退", "text": "北斗七星，伏魔镇邪。敕！"},
     "summon.judge":     {"rate": 25,  "fx": "master", "text": "钟馗大佬快来！"},
     "summon.priest":    {"rate": 15,  "fx": "master", "text": "九叔！救命啊！"},
+    "priest.ink":       {"rate": 5,   "fx": "roar", "instruct": "坚毅威严，声如洪钟，运足中气大声喝令，要把恶鬼吓退", "text": "墨斗弹线，封！"},
+    "priest.mirror":    {"rate": 5,   "fx": "roar", "instruct": "坚毅威严，声如洪钟，运足中气大声喝令，要把恶鬼吓退", "text": "八卦照妖，现形！"},
+    "priest.possess":   {"rate": 5,   "fx": "roar", "instruct": "坚毅威严，声如洪钟，运足中气大声喝令，要把恶鬼吓退", "text": "茅山神打，借你法力！"},
+    "judge.devour":     {"rate": 0,   "fx": "hell3", "instruct": "地狱霸主降临人间，声音低沉而有威压，暴怒咆哮，震慑群鬼", "text": "入我腹中！"},
+    "judge.brush":      {"rate": 5,   "fx": "hell3", "instruct": "地狱霸主降临人间，声音低沉而有威压，暴怒咆哮，震慑群鬼", "text": "生死簿上，勾你名姓！"},
+    "judge.ghosts":     {"rate": 0,   "fx": "hell3", "instruct": "地狱霸主降临人间，声音低沉而有威压，暴怒咆哮，震慑群鬼", "text": "五鬼听令！"},
     "black.enter":      {"rate": -20, "fx": "ghost", "text": "拿命来……"},
     "white.enter":      {"rate": -5, "fx": "ghost", "text": "勾魂……索命……"}
   }

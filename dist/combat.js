@@ -6,9 +6,9 @@ import {makeAtmosphere} from './atmosphere.js';
 import {preloadWardRelic} from './ward-effects.js';
 import {actionTiming} from './action-timing.js';
 
-import {disciplines,sevenStars,stickyRice} from './disciplines.js';
+import {disciplines,sevenStars,stickyRice,judgeMoves,priestMoves} from './disciplines.js';
 import {relicTimes,freshMods,drawRelics} from './relics.js';
-import {makePaperActor,makeFlyerActor} from './minions.js';
+import {makePaperActor,makeFlyerActor,makeImpActor} from './minions.js';
 import {PAPER,FLYER,BLACK,WHITE,foes,chargeLength,chargeHalfWidth,prisonRadius,makeEnvoySigns} from './envoys.js';
 
 const clamp=THREE.MathUtils.clamp;
@@ -90,7 +90,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   let wardHp=0,wardTime=0,envoyKills=0,tetherEnemy=null,tetherTime=0;
   function breakTether(){tetherEnemy=null;tetherTime=0;enemySigns.tether(null);}
   function dismiss(e){e.ring.visible=false;e.sign?.hide();}
-  let spokeHurt=false,mods=freshMods(),picked=[],nextRelic=0,nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
+  let godMode=false,inkLines=[],imps=[],possessed=0,spokeHurt=false,mods=freshMods(),picked=[],nextRelic=0,nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
   let castPose='attack',castYaw=0,evade=0,focus=null,focusLife=0,focusSpan=0,focusRite=false,focusGate=false,dim=0,primary=null,bannerTime=0,msgTime=0,hudTick=0,loopId=0,prev=0,activeTouch=null;
   const velocity=V(),masterMotion={};
   // Retina screens rarely need full 2x for a 3D scene; adapt down to 0.85 when frames drop.
@@ -110,12 +110,13 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       scene.add(ring);
       e={actor,ring,type,sign:type>=BLACK?enemySigns.create(type):null,origin:V(),anchor:V(),attackDir:V(),motion:{}};
     }
-    Object.assign(e,{hp:kind.hp,max:kind.hp,speed:kind.speed,seed:Math.random()*5,marked:0,slow:0,stagger:0,dead:0,stage:'chase',clock:0,
+    Object.assign(e,{hp:kind.hp,max:kind.hp,speed:kind.speed,seed:Math.random()*5,marked:0,slow:0,exposed:0,devour:0,inkSafe:0,stagger:0,dead:0,stage:'chase',clock:0,
       wait:type===WHITE?2.5:type===BLACK?2.2:type===FLYER?2.6:type===PAPER?.4:.7,wind:type===WHITE?1.35:type===BLACK?1.12:type===FLYER?.85:type===PAPER?.42:type===2?.91:.73,
       reach:type===WHITE?8.9:type===BLACK?6.8:type===FLYER?1.5:type===PAPER?1.6:type===2?3.3:2.3,orbit:Math.random()*Math.PI*2,hitOnce:false,staggerSpan:0});
     if(state==='play'&&type===BLACK)audio.voice('black.enter',{channel:'black',gain:.9});
     if(state==='play'&&type===WHITE)audio.voice('white.enter',{channel:'white',gain:.9});
     if(type===FLYER)e.actor.lift=2.4;
+    e.actor.root.visible=true;e.actor.root.position.y=0;
     const p=e.actor.root.position;p.set(x,0,z);e.actor.root.scale.setScalar(type===2?1.18:1);e.actor.root.rotation.y=Math.atan2(pos.x-x,pos.z-z);
     e.ring.visible=false;e.actor.resetMotion?.();e.actor.animate('idle',t+e.seed,1);scene.add(e.actor.root);enemies.push(e);
   }
@@ -138,7 +139,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function banner(s,sub,seconds=1.9){ui.banner(s,sub);bannerTime=seconds;}
   function start(){
     cancelAnimationFrame(loopId);fx.clear();while(enemies.length)release(enemies.pop());keys.clear();joy.x=joy.y=0;
-    Object.assign(cool={},{mark:0,chain:0,rice:0,dodge:0,thunder:0,summon:0,priest:0});spokeHurt=false;mods=freshMods();picked=[];nextRelic=0;t=0;timeLeft=duration;hp=100;seals=3;sealCharge=0;kills=markCount=chainCount=thunderCount=summonCount=priestCount=0;
+    Object.assign(cool={},{mark:0,chain:0,rice:0,dodge:0,thunder:0,summon:0,priest:0});spokeHurt=false;clearAllies();possessed=0;mods=freshMods();picked=[];nextRelic=0;t=0;timeLeft=duration;hp=100;seals=3;sealCharge=0;kills=markCount=chainCount=thunderCount=summonCount=priestCount=0;
     phase=nextWave=0;yaw=0;pitch=.40;shake=surge=dim=hurt=immune=dash=cast=focusLife=focusSpan=hudTick=perfTime=perfCount=0;primary=null;focus=null;focusRite=false;activeTouch=null;
     wardHp=wardTime=envoyKills=followTime=0;basicStrike=null;breakTether();
     pos.set(0,0,5);velocity.set(0,0,0);evade=0;master.root.rotation.set(0,Math.PI,0);master.resetMotion?.();master.animate('idle',0,1);reticle.visible=false;groundMarker.visible=false;hoverPoint=null;
@@ -166,7 +167,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   }
   function pause(){if(state!=='play')return false;state='paused';keys.clear();joy.x=joy.y=0;activeTouch=null;audio.ambience(false);cancelAnimationFrame(loopId);return true;}
   function resume(){if(state!=='paused')return;state='play';audio.ambience(true);prev=performance.now();canvas.focus({preventScroll:true});loopId=requestAnimationFrame(frame);}
-  function leave(){state='idle';breakTether();cancelAnimationFrame(loopId);keys.clear();fx.clear();while(enemies.length)release(enemies.pop());audio.ambience(false);ui.damage(0);ui.target(null);}
+  function leave(){clearAllies();state='idle';breakTether();cancelAnimationFrame(loopId);keys.clear();fx.clear();while(enemies.length)release(enemies.pop());audio.ambience(false);ui.damage(0);ui.target(null);}
   function pickPrimary(point){
     let best=null,score=Infinity;const facing=V(-Math.sin(yaw),0,-Math.cos(yaw));
     for(const e of enemies){if(e.hp<=0)continue;const p=e.actor.root.position,d=p.distanceTo(pos);let s=d;if(point)s=p.distanceTo(point);else if(d>.15)s+=Math.max(0,1-((p.x-pos.x)*facing.x+(p.z-pos.z)*facing.z)/d)*2.2;
@@ -176,7 +177,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function groundAim(){return V(clamp(pos.x-Math.sin(yaw)*6,-13,13),0,clamp(pos.z-Math.cos(yaw)*6,-11,11));}
   function damageEnemy(e,amount,stun){
     if(e.hp<=0)return;
-    e.hp=Math.max(0,e.hp-amount*mods.dmg);
+    e.hp=Math.max(0,e.hp-amount*mods.dmg*(possessed>0?1.4:1)*(e.exposed>0?1.5:1));
     // A glancing basic attack chips the officials' health while their warning stays readable.
     if(e.hp===0 || e.type<BLACK || stun>=.65){
       e.stagger=e.staggerSpan=Math.max(e.stagger,stun);dismiss(e);e.stage='chase';e.wait=Math.max(e.wait,.35);
@@ -225,14 +226,25 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     }
     if(t>=strike.impact){
       damageEnemy(e,classId==='ward'?24:classId==='sword'?23:18,.13);
+      if(possessed>0){const p=e.actor.root.position.clone();fx.rites.palm(pos,p);area(p,2.4,22,.35,0xffd77a);audio.sound('chain');}
       basicStrike=null;
     }
   }
-  function skill(name,point){
+  function skill(name,point,move){
     if(state!=='play'||!(name in cool))return false;
     if(cool[name]>.02){if(name!=='mark')notice('法术回气中',.7);return false;}
     if(name==='summon'&&seals<3){notice('每镇伏两名敌人凝成一印，集齐三印可请神。');return false;}
     if(!point&&(name==='thunder'||name==='summon'||name==='priest')&&(keys.has('ShiftLeft')||keys.has('ShiftRight'))&&hoverPoint)point=hoverPoint;
+    // 请神选招：战斗完全暂停，四选一后再从这里继续施放。
+    if((name==='summon'||name==='priest')&&!move){
+      const moves=name==='summon'?judgeMoves:priestMoves,keep=point?.clone();
+      state='choose';keys.clear();joy.x=joy.y=0;activeTouch=null;audio.ambience(false);audio.sound('chime',.7);
+      ui.choose({kicker:name==='summon'?'三印请神 · 钟馗':'请一眉道长',title:name==='summon'?'钟馗出何招':'道长施何法',moves},picked=>{
+        if(state!=='choose')return;state='play';audio.ambience(true);prev=performance.now();canvas.focus({preventScroll:true});loopId=requestAnimationFrame(frame);
+        if(picked)skill(name,keep,picked.key);else syncHud();
+      });
+      return true;
+    }
     const target=(point&&pickPrimary(point))||pickPrimary();const at=point?point.clone():target?target.actor.root.position.clone():groundAim();
     at.x=clamp(at.x,-14,14);at.y=0;at.z=clamp(at.z,-12,12);
     if(name==='dodge'){
@@ -289,13 +301,54 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       pose(invoking?'invoke':'ultimate',at);
       if(!priest)fx.castTrails(invoking?'summon':classId,castingHand,at);
       if(priest){
-        priestCount++;cool.priest=mods.priestCd;audio.voice('summon.priest',{channel:'summon'});audio.voice('priest.invoke',{channel:'priest',delay:1.25});banner('七星伏魔','一眉道长 · 踏罡封符',3.1);
-        fx.priest(at,(p,hit)=>area(p,hit.radius,hit.damage,hit.stun,hit===sevenStars.gather?0xa9dfff:0xffd784),yaw);
+        priestCount++;cool.priest=mods.priestCd;
+        const m=priestMoves.find(x=>x.key===move);banner(m.name,'一眉道长 · '+m.tag,3.1);
+        audio.voice('summon.priest',{channel:'summon'});audio.voice('priest.'+move,{channel:'priest',delay:1.25});
+        if(move==='stars')fx.priest(at,(p,hit)=>area(p,hit.radius,hit.damage,hit.stun,hit===sevenStars.gather?0xa9dfff:0xffd784),yaw);
+        else if(move==='ink'){focusLife=focusSpan=3.3;fx.rites.ink(pos.clone(),at,(lines,life)=>{
+          for(const l of lines)inkLines.push({...l,life});
+          for(const e of enemies)if(e.hp>0&&nearInk(e.actor.root.position,lines))inkCatch(e);
+        });}
+        else if(move==='mirror'){
+          // 照妖镜优先照向最近的无常，没有无常时照当前目标。
+          const envoy=enemies.filter(e=>e.hp>0&&e.type>=BLACK).sort((a,b)=>a.actor.root.position.distanceTo(pos)-b.actor.root.position.distanceTo(pos))[0];
+          const glare=envoy?envoy.actor.root.position.clone():at;focus=glare.clone();
+          focusLife=focusSpan=2.6;fx.rites.mirror(pos.clone(),glare,(origin,dir,range,spread)=>{
+          let caught=0;
+          for(const e of enemies){
+            if(e.hp<=0)continue;tmp.copy(e.actor.root.position).sub(origin).setY(0);const d=tmp.length();
+            if(d>range||tmp.normalize().dot(dir)<Math.cos(spread+.1))continue;
+            caught++;e.exposed=6;
+            if(e.type>=BLACK){if(e===tetherEnemy)breakTether();dismiss(e);e.stage='chase';e.wait=Math.max(e.wait,3);damageEnemy(e,60,2.2);}
+            else damageEnemy(e,40,1);
+            fx.hit(e.actor.root.position,0xffe3a0);
+          }
+          notice(caught?'照妖镜下 · 现出原形':'金光照空',1.6);
+        });}
+        else{focusLife=focusSpan=2.2;fx.rites.possess(()=>pos,yaw,()=>{possessed=8;fx.rites.aura(()=>pos,8);hp=Math.min(100,hp+10);notice('茅山神打 · 掌心引雷',2);syncHud();});}
       }else if(invoking){
-        summonCount++;seals=0;sealCharge=0;cool.summon=7;banner(spec.summon.name,'三印请神 · 镇宅圣君',3.25);
-        // 广西远舟喊人，钟馗应声，落剑时再喝「斩」。
+        summonCount++;seals=0;sealCharge=0;cool.summon=7;
+        const m=judgeMoves.find(x=>x.key===move);banner(m.name,'三印请神 · 钟馗',3.25);
+        // 广西远舟喊人，钟馗应声，收招时再喝一句本招台词。
         audio.voice('summon.judge',{channel:'summon'});audio.voice('judge.arrive',{channel:'judge',delay:1.1});
-        fx.summon(at,p=>{audio.voice('judge.slash',{channel:'judge'});area(p,7.3,235,2.15);});
+        // 啖鬼先锁定猎物：场上生命最多的敌人，阴差优先。
+        const prey=move==='devour'?enemies.filter(e=>e.hp>0&&!e.devour).sort((a,b)=>(b.type>=BLACK)-(a.type>=BLACK)||b.hp-a.hp)[0]:null;
+        const aim=prey?prey.actor.root.position.clone():at;
+        fx.summon(aim,(p,extra)=>{
+          audio.voice('judge.'+move,{channel:'judge'});
+          if(move==='slash')area(p,7.3,235,2.15);
+          else if(move==='devour'){
+            if(prey&&prey.hp>0){prey.devourFrom=null;prey.devour=1.1;prey.stagger=0;dismiss(prey);if(prey===tetherEnemy)breakTether();}
+            area(p,3.2,40,1,0xff5a3a);hp=Math.min(100,hp+20);notice('钟馗啖鬼 · 回元 20',1.8);syncHud();
+          }else if(move==='brush'){
+            let struck=0;
+            for(const e of enemies)if(e.hp>0&&e.type>=BLACK){
+              struck++;if(e===tetherEnemy)breakTether();dismiss(e);e.stage='chase';e.wait=Math.max(e.wait,6);
+              damageEnemy(e,Math.ceil(e.max*.35/mods.dmg),1.4);if(extra.scroll)fx.beam(extra.scroll,e.actor.root.position);
+            }
+            area(p,5,30,.6,0xff3b24);notice(struck?'生死簿上 · 勾去其名':'簿上暂无阴差之名',1.8);
+          }else spawnImps(extra.origin);
+        },move);
       }else{
         thunderCount++;cool.thunder=mods.ultCd;banner(spec.thunder.name,spec.thunder.school,3.05);audio.voice(classId+'.ultimate');
         if(classId==='sword'){
@@ -319,7 +372,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     const z=(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0)+joy.y;
     result.set(x*Math.cos(yaw)+z*Math.sin(yaw),0,-x*Math.sin(yaw)+z*Math.cos(yaw));if(result.lengthSq()>1)result.normalize();return result;}
   function hurtPlayer(amount){
-    if(immune>0 || state!=='play')return false;
+    if(immune>0 || state!=='play' || godMode)return false;
     amount=Math.round(amount*mods.taken);
     const absorbed=Math.min(wardHp,amount);wardHp-=absorbed;
     hp=Math.max(0,hp-(amount-absorbed));immune=.5;
@@ -406,11 +459,66 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     tmp.copy(pos).sub(p);turn(actor.root,Math.atan2(tmp.x,tmp.z),dt);e.pose='walk';
     if(e.wait<=0&&dist<7.5){e.stage='wind';e.clock=0;e.anchor.copy(pos);}
   }
+  function nearInk(p,lines){
+    for(const {a,b} of lines){
+      const abx=b.x-a.x,abz=b.z-a.z,len=abx*abx+abz*abz||1,u=clamp(((p.x-a.x)*abx+(p.z-a.z)*abz)/len,0,1);
+      const dx=p.x-(a.x+abx*u),dz=p.z-(a.z+abz*u);if(dx*dx+dz*dz<.55)return true;
+    }
+    return false;
+  }
+  function inkCatch(e){
+    e.inkSafe=3;
+    if(e.type>=BLACK){e.slow=Math.max(e.slow,4);damageEnemy(e,16,.2);}
+    else{damageEnemy(e,22,2.5);}
+    fx.hit(e.actor.root.position,0x2a1a10);
+  }
+  function spawnImps(origin){
+    for(let i=0;i<5;i++){
+      const actor=makeImpActor(i),a=i/5*Math.PI*2;actor.root.scale.setScalar(1.35);
+      actor.root.position.set(clamp(origin.x+Math.cos(a)*1.4,-14,14),0,clamp(origin.z+1.5+Math.sin(a)*.8,-12,12));scene.add(actor.root);
+      imps.push({actor,life:10,cd:.3+i*.1,swing:0,seed:i*1.3});
+    }
+    notice('五鬼听令 · 追打群邪',1.8);
+  }
+  function clearAllies(){for(const m of imps)m.actor.root.removeFromParent();imps=[];inkLines=[];}
+  function alliesStep(dt){
+    possessed=Math.max(0,possessed-dt);
+    for(let i=inkLines.length-1;i>=0;i--){if((inkLines[i].life-=dt)<=0)inkLines.splice(i,1);}
+    for(let i=imps.length-1;i>=0;i--){
+      const m=imps[i],root=m.actor.root;m.life-=dt;m.cd-=dt;m.swing=Math.max(0,m.swing-dt);
+      if(m.life<=0){fx.hit(root.position,0xffd27a);root.removeFromParent();imps.splice(i,1);continue;}
+      let best=null,bd=Infinity;for(const e of enemies){if(e.hp<=0||e.devour)continue;const d=e.actor.root.position.distanceTo(root.position);if(d<bd){bd=d;best=e;}}
+      if(best){
+        tmp.copy(best.actor.root.position).sub(root.position).setY(0);root.rotation.y=Math.atan2(tmp.x,tmp.z);
+        if(bd>1.1)root.position.addScaledVector(tmp.normalize(),Math.min(bd-1,5.2*dt));
+        else if(m.cd<=0){m.cd=.7;m.swing=.3;damageEnemy(best,10,.2);fx.hit(best.actor.root.position,0xffd27a);}
+      }
+      m.actor.animate(m.swing>0?'attack':'walk',t+m.seed,1-m.swing/.3);
+    }
+  }
   function enemiesStep(dt){
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i],p=e.actor.root.position;
       const root=e.actor.root,fromX=p.x,fromZ=p.z,fromYaw=root.rotation.y;
       e.pose='idle';e.progress=1;
+      if(e.devour>0&&e.hp>0){
+        // 被钟馗抓起：升空、旋转、缩小，然后一口吞下。
+        e.devour=Math.max(0,e.devour-dt);const u=1-e.devour/1.1;
+        // 往镜头方向拉出一点、升到钟馗胸前，免得被他身子挡住。
+        // 先被提到钟馗身侧半空（镜头看得见），最后三成时间被吸进口中。
+        if(!e.devourFrom)e.devourFrom=p.clone();
+        tmp.copy(pos).sub(e.devourFrom).setY(0);if(tmp.lengthSq()>.01)tmp.normalize();else tmp.set(0,0,1);
+        const grab=1-(1-Math.min(1,u/.7))**2,gulp=Math.max(0,(u-.7)/.3);
+        p.copy(e.devourFrom).addScaledVector(V(tmp.z,0,-tmp.x),2.1*grab*(1-gulp)).addScaledVector(tmp,.9*gulp);
+        root.position.y=4.2*grab+1.1*gulp;
+        root.rotation.y+=dt*9;root.scale.setScalar((e.type===2?1.18:1)*(1-.25*grab-.65*gulp));
+        if(Math.random()<dt*14)fx.hit(root.position.clone().setY(root.position.y-.6),0x9b1410);
+        e.actor.animate('hit',t+e.seed,.5,localMotion(e.motion,root,fromX,fromZ,fromYaw,dt));
+        if(e.devour<=0){e.devourFrom=null;fx.hit(root.position,0x9b1410);damageEnemy(e,99999,1);root.visible=false;e.dead=1.2;}
+        continue;
+      }
+      e.exposed=Math.max(0,e.exposed-dt);e.inkSafe=Math.max(0,e.inkSafe-dt);
+      if(inkLines.length&&e.hp>0&&e.inkSafe<=0&&nearInk(p,inkLines))inkCatch(e);
       if(e.hp<=0){e.dead+=dt;e.actor.animate('dead',t+e.seed,clamp(e.dead/.65,0,1),localMotion(e.motion,root,fromX,fromZ,fromYaw,dt));if(e.dead>1.25){release(e);enemies.splice(i,1);}continue;}
       // 糯米粘住时，僵尸起跳与追击都慢一半，阴差的预警也拖长。
       e.slow=Math.max(0,e.slow-dt);const pace=e.slow>0?(e.type>=BLACK?.7:.5):1;
@@ -505,7 +613,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     if(master.animate(action,t,progress,motion))audio.sound('step');
     advanceBasic();
     enemiesStep(dt);if(state!=='play')return;
-    enemySigns.tether(tetherEnemy?.actor.root.position,pos,t);fx.update(dt);shake=Math.max(0,shake-dt*1.0);surge=Math.max(0,surge-dt*3.4);hurt=Math.max(0,hurt-dt*1.6);
+    enemySigns.tether(tetherEnemy?.actor.root.position,pos,t);alliesStep(dt);fx.update(dt);shake=Math.max(0,shake-dt*1.0);surge=Math.max(0,surge-dt*3.4);hurt=Math.max(0,hurt-dt*1.6);
     dim+=((focusLife>.25?1:0)-dim)*(1-Math.exp(-dt*(focusLife>.25?7:3)));
     court.setSurge(surge*.4);court.update(dt,t);punch.intensity=surge*.7;spellLight.intensity=focusLife>0?(focusSpan>4?12:13)+surge*(focusSpan>4?16:24):0;audio.update();
     cameraStep(dt);primary=pickPrimary();
@@ -540,10 +648,10 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   canvas.addEventListener('pointercancel',()=>activeTouch=null);canvas.addEventListener('pointerleave',()=>hoverPoint=null);
   await prepareEntry();
   // ?debug: step a paused fight by fixed frames so spell beats can be captured exactly.
-  function debugAdvance(seconds,cast){
-    if(state!=='paused')return false;state='play';if(cast){cool[cast]=0;skill(cast);}
+  function debugAdvance(seconds,cast,move){
+    if(state!=='paused')return false;state='play';if(cast){cool[cast]=0;if(cast==='summon')seals=3;skill(cast,null,move);}
     for(let left=seconds;left>1e-5&&state==='play';left-=1/60)step(Math.min(left,1/60));
     atmosphere.render(scene,cam,surge,dim);if(state==='play')state='paused';return true;
   }
-  return {start,pause,resume,leave,selectClass,skill,keys,joy,debugAdvance,debugScene:scene,get state(){return state;}};
+  return {start,pause,resume,leave,selectClass,skill,keys,joy,debugAdvance,debugScene:scene,debugGod(v){godMode=!!v;},get state(){return state;}};
 }

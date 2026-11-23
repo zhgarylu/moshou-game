@@ -119,3 +119,34 @@ export function makeFlyerActor(){
   }
   return actor;
 }
+
+// 五鬼：钟馗座下五方小鬼，戴青、赤、白、玄、黄五色傩面，矮身短角，蹦跳着追打敌人。
+const impColors=[0x3fbf8f,0xd8452c,0xe8e4d8,0x3a3550,0xe0b040];
+let impFaces=null;
+function impFace(i){
+  impFaces??=impColors.map(c=>canvasTexture(128,128,(g,w,h)=>{
+    g.fillStyle='#'+new THREE.Color(c).getHexString();g.fillRect(0,0,w,h);
+    g.fillStyle='#120c08';g.beginPath();g.ellipse(40,54,14,9,-.3,0,TAU);g.ellipse(88,54,14,9,.3,0,TAU);g.fill();
+    g.fillStyle='#ffe28a';g.beginPath();g.arc(40,54,4,0,TAU);g.arc(88,54,4,0,TAU);g.fill();
+    g.strokeStyle='#120c08';g.lineWidth=5;g.beginPath();g.moveTo(26,36);g.lineTo(54,44);g.moveTo(102,36);g.lineTo(74,44);g.stroke();
+    g.fillStyle='#5a0d0a';g.beginPath();g.ellipse(64,92,26,12,0,0,TAU);g.fill();
+    g.fillStyle='#fff6e0';for(const x of [48,80]){g.beginPath();g.moveTo(x-5,84);g.lineTo(x+5,84);g.lineTo(x,98);g.closePath();g.fill();}
+  }));
+  return impFaces[i%5];
+}
+export function makeImpActor(i=0){
+  const root=new THREE.Group(),body=new THREE.Group();root.add(body);root.name='ally-imp';
+  const robe=new THREE.MeshStandardMaterial({color:0x2a1c18,roughness:.9,emissive:impColors[i%5],emissiveIntensity:.08});
+  const torso=new THREE.Mesh(new THREE.ConeGeometry(.34,.75,8),robe);torso.position.y=.42;
+  const face=new THREE.Mesh(new THREE.SphereGeometry(.26,16,12),lit(impFace(i),{emissiveIntensity:.35}));face.position.y=.98;face.rotation.y=-Math.PI/2;
+  const hornMat=new THREE.MeshStandardMaterial({color:0xe8dcc0,roughness:.6});
+  for(const s of [-1,1]){const h=new THREE.Mesh(new THREE.ConeGeometry(.05,.22,6),hornMat);h.position.set(s*.13,1.22,0);h.rotation.z=-s*.4;body.add(h);}
+  const arms=[-1,1].map(s=>{const a=new THREE.Mesh(new THREE.BoxGeometry(.09,.4,.09),robe);a.position.set(s*.3,.6,0);body.add(a);return a;});
+  body.add(torso,face);root.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+  function animate(pose='walk',time=0,p=1){
+    body.position.y=Math.abs(Math.sin(time*11))*.22;body.rotation.set(0,0,Math.sin(time*11)*.12);
+    arms.forEach((a,k)=>{a.rotation.x=pose==='attack'?-2.2+2*p:Math.sin(time*11+k*Math.PI)*.8;});
+    if(pose==='attack')body.rotation.x=.5*Math.sin(Math.PI*p);
+  }
+  return {root,animate,resetMotion(){},dispose(){}};
+}

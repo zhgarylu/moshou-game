@@ -99,11 +99,6 @@
   "dur": 1.375,
   "text": "斩！"
  },
- "priest.invoke": {
-  "file": "priest-invoke.mp3",
-  "dur": 3.551,
-  "text": "北斗七星，伏魔镇邪。敕！"
- },
  "black.enter": {
   "file": "black-enter.mp3",
   "dur": 1.922,
@@ -123,5 +118,40 @@
   "file": "summon-priest.mp3",
   "dur": 1.279,
   "text": "九叔！救命啊！"
+ },
+ "priest.stars": {
+  "file": "priest-stars.mp3",
+  "dur": 3.551,
+  "text": "北斗七星，伏魔镇邪。敕！"
+ },
+ "priest.ink": {
+  "file": "priest-ink.mp3",
+  "dur": 2.045,
+  "text": "墨斗弹线，封！"
+ },
+ "priest.mirror": {
+  "file": "priest-mirror.mp3",
+  "dur": 2.426,
+  "text": "八卦照妖，现形！"
+ },
+ "priest.possess": {
+  "file": "priest-possess.mp3",
+  "dur": 2.82,
+  "text": "茅山神打，借你法力！"
+ },
+ "judge.devour": {
+  "file": "judge-devour.mp3",
+  "dur": 1.78,
+  "text": "入我腹中！"
+ },
+ "judge.brush": {
+  "file": "judge-brush.mp3",
+  "dur": 2.925,
+  "text": "生死簿上，勾你名姓！"
+ },
+ "judge.ghosts": {
+  "file": "judge-ghosts.mp3",
+  "dur": 1.74,
+  "text": "五鬼听令！"
  }
 }
