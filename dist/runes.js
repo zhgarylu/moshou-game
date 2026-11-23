@@ -1,4 +1,4 @@
-const palette={ritual:['#dca84c','#ffe8ab','#4a3128'],blade:['#9bd7c9','#dbfff5','#17382f'],stars:['#90cfcb','#efffcd','#1e3840'],swordrain:['#8ee9d2','#e1ffea','#123631'],seal:['#deb780','#ffe0b6','#422c20'],altars:['#ecbb75','#fff0b1','#492f26'],lionseal:['#e6a776','#ffecbf','#472821'],thunder:['#9bc7e1','#e7f7ff','#183441'],summon:['#e3a56b','#ffcf8d','#49291f'],mark:['#e3c685','#fae4a0','#393324'],chain:['#9cdad1','#cdffed','#173a38'],dodge:['#c6d0a4','#eef4d1','#2b392e']};
+const palette={ritual:['#dca84c','#ffe8ab','#4a3128'],blade:['#9bd7c9','#dbfff5','#17382f'],stars:['#90cfcb','#efffcd','#1e3840'],swordrain:['#8ee9d2','#e1ffea','#123631'],seal:['#deb780','#ffe0b6','#422c20'],altars:['#ecbb75','#fff0b1','#492f26'],lionseal:['#e6a776','#ffecbf','#472821'],thunder:['#9bc7e1','#e7f7ff','#183441'],summon:['#e3a56b','#ffcf8d','#49291f'],mark:['#e3c685','#fae4a0','#393324'],chain:['#9cdad1','#cdffed','#173a38'],dodge:['#c6d0a4','#eef4d1','#2b392e'],rice:['#d8cfb4','#fffaf0','#2f2b25']};
 export function drawRune(canvas,type){
   const g=canvas.getContext('2d'),[line,bright,bg]=palette[type]; g.save();g.scale(canvas.width/80,canvas.height/80);
   g.clearRect(0,0,80,80);g.fillStyle=bg;g.fillRect(1,1,78,78);
@@ -24,6 +24,10 @@ export function drawRune(canvas,type){
     g.rotate(.16);path([[-12,-21],[11,-21],[13,17],[-10,21],[-12,-21]]);
     path([[-7,-12],[-1,-16],[5,-10],[2,-5],[8,0],[-4,5],[4,10],[-4,13]]);
     for(const [x,y] of [[-18,-8],[-21,2],[-18,11],[17,-17],[21,-13],[19,-5],[15,-8]]){g.beginPath();g.arc(x,y,1.6,0,Math.PI*2);g.fill();}
+  }
+  if(type==='rice'){
+    path([[-20,4],[20,4]]);g.beginPath();g.moveTo(-18,4);g.quadraticCurveTo(0,30,18,4);g.stroke();path([[-7,20],[7,20]]);
+    for(const [x,y,a] of [[-10,-4,.4],[-2,-9,-.3],[7,-5,.8],[13,-14,.2],[-14,-15,-.6],[3,-20,.5],[-6,-26,.1],[17,-24,-.4]]){g.save();g.translate(x,y);g.rotate(a);g.beginPath();g.ellipse(0,0,1.7,3.4,0,0,6.29);g.fill();g.restore();}
   }
   if(type==='dodge'){path([[-23,10],[-9,6],[2,-1],[13,-15],[19,-19],[15,-6],[1,7],[-9,10]]);path([[-17,16],[-3,13],[16,3]]);path([[-16,-3],[-6,-5],[3,-14]]);}
   g.restore();

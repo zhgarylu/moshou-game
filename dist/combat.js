@@ -6,7 +6,7 @@ import {makeAtmosphere} from './atmosphere.js';
 import {preloadWardRelic} from './ward-effects.js';
 import {actionTiming} from './action-timing.js';
 
-import {disciplines,sevenStars} from './disciplines.js';
+import {disciplines,sevenStars,stickyRice} from './disciplines.js';
 import {BLACK,WHITE,foes,chargeLength,chargeHalfWidth,prisonRadius,makeEnvoySigns} from './envoys.js';
 
 const clamp=THREE.MathUtils.clamp;
@@ -83,10 +83,11 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   let wardHp=0,wardTime=0,envoyKills=0,tetherEnemy=null,tetherTime=0;
   function breakTether(){tetherEnemy=null;tetherTime=0;enemySigns.tether(null);}
   function dismiss(e){e.ring.visible=false;e.sign?.hide();}
-  let nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
+  let spokeHurt=false,nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
   let castPose='attack',castYaw=0,evade=0,focus=null,focusLife=0,focusSpan=0,focusRite=false,focusGate=false,dim=0,primary=null,bannerTime=0,msgTime=0,hudTick=0,loopId=0,prev=0,activeTouch=null;
   const velocity=V(),masterMotion={};
-  const preferredScale=Math.min(2,Math.max(1.3,devicePixelRatio));
+  // Retina screens rarely need full 2x for a 3D scene; adapt down to 0.85 when frames drop.
+  const preferredScale=Math.min(1.6,Math.max(1,devicePixelRatio));
   let pixelScale=preferredScale,perfTime=0,perfCount=0;
   const dashDir=V(),camFocus=V(),camBase=V(),desiredCam=V(),desiredFocus=V(),aimDir=V(),tmp=V(),project=V(),ray=new THREE.Raycaster(),plane=new THREE.Plane(V(0,1,0),0);
   function resize(){const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);renderer.setPixelRatio(pixelScale);renderer.setSize(w,h,false);atmosphere.resize(canvas.width,canvas.height);cam.aspect=w/h;cam.updateProjectionMatrix();}
@@ -102,9 +103,11 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       scene.add(ring);
       e={actor,ring,type,sign:type>=BLACK?enemySigns.create(type):null,origin:V(),anchor:V(),attackDir:V(),motion:{}};
     }
-    Object.assign(e,{hp:kind.hp,max:kind.hp,speed:kind.speed,seed:Math.random()*5,marked:0,stagger:0,dead:0,stage:'chase',clock:0,
+    Object.assign(e,{hp:kind.hp,max:kind.hp,speed:kind.speed,seed:Math.random()*5,marked:0,slow:0,stagger:0,dead:0,stage:'chase',clock:0,
       wait:type===WHITE?2.5:type===BLACK?2.2:.7,wind:type===WHITE?1.35:type===BLACK?1.12:type===2?.91:.73,
       reach:type===WHITE?8.9:type===BLACK?6.8:type===2?3.3:2.3,hitOnce:false,staggerSpan:0});
+    if(state==='play'&&type===BLACK)audio.voice('black.enter',{channel:'black',gain:.9});
+    if(state==='play'&&type===WHITE)audio.voice('white.enter',{channel:'white',gain:.9});
     const p=e.actor.root.position;p.set(x,0,z);e.actor.root.scale.setScalar(type===2?1.18:1);e.actor.root.rotation.y=Math.atan2(pos.x-x,pos.z-z);
     e.ring.visible=false;e.actor.resetMotion?.();e.actor.animate('idle',t+e.seed,1);scene.add(e.actor.root);enemies.push(e);
   }
@@ -127,7 +130,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function banner(s,sub,seconds=1.9){ui.banner(s,sub);bannerTime=seconds;}
   function start(){
     cancelAnimationFrame(loopId);fx.clear();while(enemies.length)release(enemies.pop());keys.clear();joy.x=joy.y=0;
-    Object.assign(cool={},{mark:0,chain:0,dodge:0,thunder:0,summon:0,priest:0});t=0;timeLeft=duration;hp=100;seals=3;sealCharge=0;kills=markCount=chainCount=thunderCount=summonCount=priestCount=0;
+    Object.assign(cool={},{mark:0,chain:0,rice:0,dodge:0,thunder:0,summon:0,priest:0});spokeHurt=false;t=0;timeLeft=duration;hp=100;seals=3;sealCharge=0;kills=markCount=chainCount=thunderCount=summonCount=priestCount=0;
     phase=nextWave=0;yaw=0;pitch=.40;shake=surge=dim=hurt=immune=dash=cast=focusLife=focusSpan=hudTick=perfTime=perfCount=0;primary=null;focus=null;focusRite=false;activeTouch=null;
     wardHp=wardTime=envoyKills=followTime=0;basicStrike=null;breakTether();
     pos.set(0,0,5);velocity.set(0,0,0);evade=0;master.root.rotation.set(0,Math.PI,0);master.resetMotion?.();master.animate('idle',0,1);reticle.visible=false;groundMarker.visible=false;hoverPoint=null;
@@ -139,6 +142,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   }
   function finish(win){
     if(state!=='play')return;state='over';keys.clear();joy.x=joy.y=0;audio.ambience(false);audio.sound(win?'win':'lose');ui.target(null);ui.notice('');ui.banner('','');ui.damage(0);
+    if(win)audio.voice(classId+'.win',{delay:.6});
     ui.end({win,kills,elapsed:Math.min(duration,Math.floor(t)),thunder:thunderCount,summon:summonCount,priest:priestCount,envoys:envoyKills});
   }
   function pause(){if(state!=='play')return false;state='paused';keys.clear();joy.x=joy.y=0;activeTouch=null;audio.ambience(false);cancelAnimationFrame(loopId);return true;}
@@ -217,6 +221,18 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       if(tetherEnemy){breakTether();notice('魂链已挣脱',1.2);}
       fx.dodge(pos);audio.sound('dodge');return true;
     }
+    if(name==='rice'){
+      const p=target?target.actor.root.position.clone():groundAim();
+      if(target&&pos.distanceTo(p)>16){notice('靠近敌人再撒糯米。',.9);return false;}
+      pose('cast',p);cool.rice=stickyRice.cooldown;audio.voice(classId+'.rice');
+      if(castingHand)castingHand.getWorldPosition(palm);else palm.copy(pos).setY(1.4);fx.rice(palm,p,stickyRice.radius,stickyRice.slow);
+      const at=p.clone();let stuck=0;
+      setTimeout(()=>{if(state!=='play')return;for(const e of enemies){
+        if(e.hp<=0||e.actor.root.position.distanceTo(at)>stickyRice.radius)continue;
+        e.slow=stickyRice.slow;stuck++;damageEnemy(e,e.type>=BLACK?stickyRice.envoyDamage:stickyRice.damage,.2);fx.hit(e.actor.root.position,0xfff4d8);
+      }if(stuck)notice('糯米粘尸 · 行动迟缓',1.2);},320);
+      syncHud();return true;
+    }
     if(name==='mark'||name==='chain'){
       if(!target||pos.distanceTo(target.actor.root.position)>25){notice('靠近敌人再出招。',.9);return false;}
       const p=target.actor.root.position;
@@ -227,7 +243,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         basicStrike={target,release,impact:release+travel,launched:false};
         cool.mark=classId==='ward'?.53:.42;
       }else if(special){
-        chainCount++;cool.chain=classId==='sword'?7.5:8.5;
+        chainCount++;cool.chain=classId==='sword'?7.5:8.5;audio.voice(classId+'.chain');
         banner(spec.chain.name,spec.name,1.8);
         special.thunder(p.clone(),(center,final)=>{
           if(classId==='sword'){
@@ -237,7 +253,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
           }
         },yaw);
       }else{
-        chainCount++;cool.chain=4.4;let e=target,from=pos;const struck=new Set();
+        chainCount++;cool.chain=4.4;audio.voice('thunder.chain');let e=target,from=pos;const struck=new Set();
         for(let i=0;i<4&&e;i++){
           const ep=e.actor.root.position,tagged=e.marked>0;fx.bolt(from,ep,true);damageEnemy(e,tagged?68:37,.55);e.marked=0;struck.add(e);from=ep;
           let near=null,best=tagged?10:6;for(const other of enemies){const d=ep.distanceTo(other.actor.root.position);if(other.hp>0&&!struck.has(other)&&d<best){near=other;best=d;}}e=near;
@@ -253,15 +269,17 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       pose(invoking?'invoke':'ultimate',at);
       if(!priest)fx.castTrails(invoking?'summon':classId,castingHand,at);
       if(priest){
-        priestCount++;cool.priest=sevenStars.cooldown;banner('七星伏魔','一眉道长 · 踏罡封符',3.1);
+        priestCount++;cool.priest=sevenStars.cooldown;audio.voice('priest.invoke',{channel:'priest'});banner('七星伏魔','一眉道长 · 踏罡封符',3.1);
         fx.priest(at,(p,hit)=>area(p,hit.radius,hit.damage,hit.stun,hit===sevenStars.gather?0xa9dfff:0xffd784),yaw);
       }else if(invoking){
         summonCount++;seals=0;sealCharge=0;cool.summon=7;banner(spec.summon.name,'三印请神 · 镇宅圣君',3.25);
-        fx.summon(at,p=>area(p,7.3,235,2.15));
+        audio.voice(classId+'.invoke');audio.voice('judge.arrive',{channel:'judge',delay:1.15});
+        fx.summon(at,p=>{audio.voice('judge.slash',{channel:'judge'});area(p,7.3,235,2.15);});
       }else{
-        thunderCount++;cool.thunder=15;banner(spec.thunder.name,spec.thunder.school,3.05);
+        thunderCount++;cool.thunder=15;banner(spec.thunder.name,spec.thunder.school,3.05);audio.voice(classId+'.ultimate');
         if(classId==='sword'){
           special.summon(at,(center,final)=>{
+            if(final)audio.voice('sword.final');
             area(center,final?6.1:4.9,final?126:34,final?1.25:.25,spec.light,e=>{
               if(final && e.marked>0){e.marked=0;return 56;}
             });
@@ -269,9 +287,9 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         }else if(classId==='ward'){
           special.summon(at,(center,final)=>{
             if(!final)return;
-            area(center,6.8,222,2.7,spec.light);wardHp=28;wardTime=6;notice('狮印护身 · 可抵 28 点伤害',2);
+            audio.voice('ward.final');area(center,6.8,222,2.7,spec.light);wardHp=28;wardTime=6;notice('狮印护身 · 可抵 28 点伤害',2);
           },yaw);
-        }else fx.thunder(at,(p,index)=>area(p,index===4?5.8:3.65,index===4?106:35,index===4?1.2:.38));
+        }else fx.thunder(at,(p,index)=>{if(index===4)audio.voice('thunder.final');area(p,index===4?5.8:3.65,index===4?106:35,index===4?1.2:.38);});
       }
     }
     syncHud();return true;
@@ -285,6 +303,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     hp=Math.max(0,hp-(amount-absorbed));immune=.5;
     if(absorbed)audio.sound('seal',.6);
     if(amount>absorbed){hurt=.65;shake=Math.max(shake,.12);audio.sound('hurt');}
+    if(!spokeHurt&&hp>0&&hp<=35){spokeHurt=true;audio.voice(classId+'.hurt');}
     if(hp<=0)finish(false);
     return amount>absorbed && hp>0;
   }
@@ -346,11 +365,13 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       const root=e.actor.root,fromX=p.x,fromZ=p.z,fromYaw=root.rotation.y;
       e.pose='idle';e.progress=1;
       if(e.hp<=0){e.dead+=dt;e.actor.animate('dead',t+e.seed,clamp(e.dead/.65,0,1),localMotion(e.motion,root,fromX,fromZ,fromYaw,dt));if(e.dead>1.25){release(e);enemies.splice(i,1);}continue;}
-      e.marked=Math.max(0,e.marked-dt);e.wait=Math.max(0,e.wait-dt);e.clock+=dt;
+      // 糯米粘住时，僵尸起跳与追击都慢一半，阴差的预警也拖长。
+      e.slow=Math.max(0,e.slow-dt);const pace=e.slow>0?(e.type>=BLACK?.7:.5):1;
+      e.marked=Math.max(0,e.marked-dt);e.wait=Math.max(0,e.wait-dt*pace);e.clock+=dt*pace;
       if(e.stagger>0){e.stagger=Math.max(0,e.stagger-dt);e.actor.animate('hit',t+e.seed,1-e.stagger/e.staggerSpan,localMotion(e.motion,root,fromX,fromZ,fromYaw,dt));continue;}
       const dist=p.distanceTo(pos),type=e.type;
       if(type>=BLACK){
-        envoyStep(e,dt,dist);
+        envoyStep(e,dt*pace,dist);
       }else if(e.stage==='wind'){
         const progress=Math.min(1,e.clock/e.wind);e.ring.visible=true;e.ring.position.set(e.anchor.x,.06,e.anchor.z);e.ring.scale.setScalar(e.reach*(.8+progress*.2));e.ring.material.opacity=.36+.5*progress;
         e.pose='cast';e.progress=progress;
@@ -363,7 +384,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         tmp.copy(pos).sub(p);if(dist>.01)tmp.multiplyScalar(1/dist);turn(e.actor.root,Math.atan2(tmp.x,tmp.z),dt);
         if(dist<e.reach+.3&&e.wait<=0){
           e.stage='wind';e.clock=0;e.attackDir.copy(tmp);e.anchor.copy(p).addScaledVector(tmp,.85);
-        }else if(dist>1){p.addScaledVector(tmp,e.speed*dt);e.pose='walk';}
+        }else if(dist>1){p.addScaledVector(tmp,e.speed*pace*dt);e.pose='walk';}
       }
       // Make silhouettes and attack warnings readable when several corpses reach the same spot.
       for(let j=0;j<i;j++){const other=enemies[j];if(other.hp<=0||e.stage==='wind'||e.stage==='strike')continue;const o=other.actor.root.position,dx=p.x-o.x,dz=p.z-o.z,sq=dx*dx+dz*dz;if(sq>.0001&&sq<.97){const d=Math.sqrt(sq),push=(1-d)*dt*3/d;p.x+=dx*push;p.z+=dz*push;}}
@@ -448,10 +469,10 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function frame(now){
     if(state!=='play')return;const dt=clamp((now-prev)/1000,0,.35);prev=now;
     perfTime+=dt;perfCount++;
-    if(perfTime>=3){
+    if(perfTime>=1.5){
       const fps=perfCount/perfTime,previous=pixelScale;
-      if(fps<24)pixelScale=Math.max(1.0,pixelScale-.15);
-      if(fps>52)pixelScale=Math.min(preferredScale,pixelScale+.10);
+      if(fps<45)pixelScale=Math.max(.85,pixelScale-(fps<28?.25:.12));
+      else if(fps>56)pixelScale=Math.min(preferredScale,pixelScale+.08);
       if(Math.abs(previous-pixelScale)>.001)resize();
       perfTime=perfCount=0;
     }

@@ -1,10 +1,30 @@
 export function makeSound(){
   let ctx=null,out=null,wind=null,muted=false,bed=null,nextSong=0,phrase=0;
+  // Voice lines live in voice/index.json; decoded once the AudioContext exists.
+  const lines=new Map(),speaking={};let voiceOut=null,catalogue=null;
+  function loadVoices(){
+    catalogue??=fetch(new URL('./voice/index.json',import.meta.url)).then(r=>r.ok?r.json():{}).catch(()=>({}));
+    catalogue.then(index=>{for(const [key,{file}] of Object.entries(index)){
+      if(lines.has(key))continue;lines.set(key,null);
+      fetch(new URL('./voice/'+file,import.meta.url)).then(r=>r.arrayBuffer()).then(b=>ctx.decodeAudioData(b)).then(buf=>lines.set(key,buf)).catch(()=>lines.delete(key));
+    }});
+  }
+  // channel keeps one line per speaker: a new shout cuts the previous one.
+  function voice(key,{channel='player',gain=1,delay=0}={}){
+    if(!ctx||muted)return 0;const buf=lines.get(key);if(!buf)return 0;
+    const at=ctx.currentTime+delay;
+    try{speaking[channel]?.stop(at);}catch{}
+    const src=ctx.createBufferSource(),g=ctx.createGain();src.buffer=buf;g.gain.value=gain;
+    src.connect(g);g.connect(voiceOut);src.start(at);speaking[channel]=src;
+    src.onended=()=>{if(speaking[channel]===src)speaking[channel]=null;};
+    return buf.duration;
+  }
   const notes=[220,261.63,329.63,392,440,392,329.63,261.63];
   function init(){
     if(ctx){if(ctx.state==='suspended')ctx.resume().catch(()=>{});return;}
     try{ctx=new AudioContext();out=ctx.createGain();out.gain.value=muted?0:.55;
       const compressor=ctx.createDynamicsCompressor();compressor.threshold.value=-14;out.connect(compressor);compressor.connect(ctx.destination);
+      voiceOut=ctx.createGain();voiceOut.gain.value=1.25;voiceOut.connect(out);loadVoices();
       wind=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);const data=wind.getChannelData(0);let last=0;
       for(let i=0;i<data.length;i++){last=(last+.18*(Math.random()*2-1))/.995;last=Math.max(-1,Math.min(1,last));data[i]=.73*(Math.random()*2-1)+last*.27;}
     }catch{}
@@ -45,6 +65,7 @@ export function makeSound(){
     if(k==='soul'){tone(580,382,.65,'sine',.16*p);tone(801,582,.82,'triangle',.09*p,.08);}
     if(k==='hurt'){tone(100,39,.22,'triangle',.23);noise(.19,640,.28);}
     if(k==='dodge')noise(.24,3500,.35);
+    if(k==='rice'){noise(.5,7800,.3*p,0,2400);[0,.05,.11,.18].forEach(d=>noise(.06,9000,.12*p,d,3000));}
     if(k==='step')noise(.07,370,.1);
     if(k==='win'){[0,2,3,4].forEach((n,i)=>tone(notes[n],notes[n],1,'triangle',.20,.18*i));}
     if(k==='lose'){tone(146,98,1.8,'triangle',.19);tone(73,49,2.1,'sine',.3);}
@@ -52,5 +73,5 @@ export function makeSound(){
   function ambience(on){if(!ctx||!wind)return;if(bed){bed.stop();bed=null;}if(!on)return;
     bed=ctx.createBufferSource();bed.buffer=wind;bed.loop=true;const f=ctx.createBiquadFilter(),a=ctx.createGain();f.type='lowpass';f.frequency.value=480;a.gain.value=.042;bed.connect(f);f.connect(a);a.connect(out);bed.start();nextSong=ctx.currentTime+1.7;phrase=0;}
   function update(){if(!ctx||!bed||muted||ctx.currentTime<nextSong)return;nextSong=ctx.currentTime+2.1;const f=notes[[0,2,1,0,5,3,1,0][phrase++%8]];tone(f,f*.997,1.15,'triangle',.047);tone(f*2,f*1.99,.77,'sine',.025);}
-  return{init,sound,ambience,update,mute(v){muted=v;if(out)out.gain.setTargetAtTime(v?0:.55,ctx.currentTime,.04);}};
+  return{init,sound,voice,ambience,update,mute(v){muted=v;if(out)out.gain.setTargetAtTime(v?0:.55,ctx.currentTime,.04);}};
 }

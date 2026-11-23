@@ -481,6 +481,44 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
     flash(start,end,empowered ? 0xffc464 : 0x75d8ff,empowered ? 1.4 : 1);
     sparks(end,empowered?23:12,empowered?0xffce7b:0x94d8ff,2.2,.36,7);
   }
+  // 糯米：一把米粒从掌心抛向目标，落地铺成一片发白的米阵，持续到粘尸效果结束。
+  const riceMap=paint(256,256,(g,w,h)=>{
+    g.translate(w/2,h/2);
+    for(let i=0;i<900;i++){
+      const r=Math.sqrt(Math.random())*118,a=between(0,TAU),k=1-r/118;
+      g.save();g.translate(Math.cos(a)*r,Math.sin(a)*r);g.rotate(between(0,TAU));
+      g.fillStyle='rgba(255,252,238,'+(.35+.6*k)+')';g.beginPath();g.ellipse(0,0,1.6,3.6,0,0,TAU);g.fill();g.restore();
+    }
+    g.strokeStyle='rgba(255,246,214,.7)';g.lineWidth=3;circle(g,120);
+  });
+  function rice(from,target,radius,linger) {
+    const start=from.clone(),end=clampFloor(target),flight=.32;
+    track(flight,fx=>{
+      const xyz=[],vel=[],size=[],random=[];
+      for(let i=0;i<46;i++){
+        xyz.push(between(-.1,.1),between(-.1,.1),between(-.1,.1));
+        const spread=v3(between(-1,1),0,between(-1,1)).multiplyScalar(radius*.55/flight);
+        const d=end.clone().sub(start).divideScalar(flight).add(spread);
+        vel.push(d.x,d.y+9*flight*.5,d.z);size.push(between(.06,.12));random.push(Math.random());
+      }
+      const geo=fx.own(new THREE.BufferGeometry());
+      for(const [key,array,n] of [['position',xyz,3],['velocity',vel,3],['diameter',size,1],['variation',random,1]])geo.setAttribute(key,new THREE.Float32BufferAttribute(array,n));
+      const mat=fx.own(pointsMaterial());mat.uniforms.gravity.value=9;mat.uniforms.tint.value.set(0xfff6dc);mat.uniforms.lifetime.value=flight*1.6;
+      const o=new THREE.Points(geo,mat);o.position.copy(start);o.frustumCulled=false;fx.group.add(o);
+      fx.step=t=>{mat.uniforms.age.value=t;};
+    });
+    track(flight+linger,fx=>{
+      const patch=surface(fx,fx.group,v3(end.x,.055,end.z),radius*2,riceMap,0xfff8e8,false);
+      const rim=mesh(fx.group,disk,basic(fx,0xfff1c8),end.x,.06,end.z,radius,radius,1);rim.rotation.x=-PI/2;
+      patch.rotation.z=between(0,TAU);
+      fx.step=t=>{
+        const land=smooth(flight-.05,flight+.12,t),fade=1-smooth(flight+linger-.6,flight+linger,t);
+        patch.material.opacity=.82*land*fade;patch.scale.setScalar(radius*2*(.7+.3*land));
+        rim.material.opacity=(.5*(1-smooth(flight,flight+.5,t))+.16)*land*fade;
+      };
+    });
+    track(flight+.5,fx=>{fx.step=t=>{if(t>=flight&&!fx.hit){fx.hit=true;blast(end,0xfff3d4,radius,.45);sparks(end,26,0xfff6e0,3.2,.5,8);feedback('rice',1);}};});
+  }
   function hit(target,color=0xffc777) { sparks(target.clone().add(v3(0,1,0)),14,color,2.7,.4,8); }
   function dodge(target) {
     const p=clampFloor(target);blast(p,0x8bb6c4,1.12,.28);
@@ -827,5 +865,5 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
       }
     } finally {preparing=false;}
   }
-  return {thunder,summon,castTrails:ritual.castTrails,priest:ritual.invoke,bolt,mark,dodge,hit,update,clear,forClass,prime};
+  return {thunder,summon,castTrails:ritual.castTrails,priest:ritual.invoke,bolt,mark,rice,dodge,hit,update,clear,forClass,prime};
 }

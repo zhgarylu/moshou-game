@@ -3,7 +3,7 @@ import {makeSound} from './sound.js';
 import {disciplines,sevenStars} from './disciplines.js';
 const $=id=>document.getElementById(id),audio=makeSound();
 const skillButtons=[...document.querySelectorAll('[data-skill]')];
-const keyMap={Digit1:'mark',Digit2:'chain',KeyR:'thunder',KeyQ:'summon',KeyE:'priest',Space:'dodge'};
+const keyMap={Digit1:'mark',Digit2:'chain',Digit3:'rice',KeyR:'thunder',KeyQ:'summon',KeyE:'priest',Space:'dodge'};
 const moveKeys=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight']);
 const modal=$('dialog'),soundButton=$('sound'),play=$('start');
 let game=null,opening=null,muted=false,dialogKind=null,lastFocus=null,visibleTarget=false;
@@ -50,12 +50,22 @@ function choose(id, remember=false){
 let remembered='thunder';try{remembered=localStorage.getItem('daofa-class') || remembered;}catch{}
 const requested=new URLSearchParams(location.search).get('class');
 choose(Object.hasOwn(disciplines,requested)?requested:Object.hasOwn(disciplines,remembered)?remembered:'thunder');
-classButtons.forEach(b=>b.onclick=()=>choose(b.dataset.class,true));
+classButtons.forEach(b=>b.onclick=()=>{choose(b.dataset.class,true);prefetch([b.dataset.class]);});
+// Start fetching the fighters while the title screen is open, so pressing
+// 入庄镇邪 mostly waits on shader warm-up rather than the network.
+let warmActors=null;
+function prefetch(ids){
+  warmActors??=import('./battle-actors.js');
+  warmActors.then(m=>m.preloadBattleActors(ids)).catch(()=>{});
+}
+const idle=window.requestIdleCallback||(f=>setTimeout(f,300));
+idle(()=>prefetch([chosen,'corpse','black','white','judge','priest']));
+classButtons.forEach(b=>b.addEventListener('pointerenter',()=>prefetch([b.dataset.class]),{once:true}));
 function help(){
   if(opening||dialogKind==='result')return;
   const ingame=game?.state==='play'||game?.state==='paused',spec=disciplines[chosen];
   if(ingame)game.pause();
-  panel('help',spec.name,'行法指南','<p>守住九十秒。黑无常沿地上的红色长道冲撞，向两侧让开。白无常在你脚下画拘魂圈，离圈可避，闪避可挣脱魂链。镇伏一名无常可回复十二点生命。</p>'+list([['移动 / 转动视角','WASD / 拖动画面'],[spec.mark.name+' / '+spec.chain.name,'单击或 1 / 2'],[spec.thunder.name+' / 请钟馗 / 请道长','R / Q / E'],['指地落阵','鼠标指向地面，按 Shift + R、Q 或 E'],['踏罡闪避 / 暂停','空格 / Esc']])+'<p>'+spec.thunder.text+' 职业大招每十五秒回气。开局有三印可请钟馗，每镇伏两名敌人再凝一印。一眉道长独立回气二十八秒。</p>',[[ingame?'返回战斗':'返回',ingame?continueGame:hideDialog]]);
+  panel('help',spec.name,'行法指南','<p>守住九十秒。黑无常沿地上的红色长道冲撞，向两侧让开。白无常在你脚下画拘魂圈，离圈可避，闪避可挣脱魂链。镇伏一名无常可回复十二点生命。</p>'+list([['移动 / 转动视角','WASD / 拖动画面'],[spec.mark.name+' / '+spec.chain.name,'单击或 1 / 2'],['糯米阵 · 粘尸迟缓','3'],[spec.thunder.name+' / 请钟馗 / 请道长','R / Q / E'],['指地落阵','鼠标指向地面，按 Shift + R、Q 或 E'],['踏罡闪避 / 暂停','空格 / Esc']])+'<p>'+spec.thunder.text+' 职业大招每十五秒回气。开局有三印可请钟馗，每镇伏两名敌人再凝一印。一眉道长独立回气二十八秒。</p>',[[ingame?'返回战斗':'返回',ingame?continueGame:hideDialog]]);
 }
 $('help').onclick=help;
 function pauseMenu(){if(!game?.pause())return;panel('pause','槐阴义庄','暂歇片刻','<p>试炼已暂停，回到战斗后继续计时。</p>',[['继续镇邪',continueGame],['返回山门',returnToMenu]]);}
