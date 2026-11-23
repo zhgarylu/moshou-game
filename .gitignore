@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 tools/.voice-cache/
 dist/voice/audition/
+trailer/

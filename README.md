@@ -41,6 +41,18 @@ WASD 移动，拖动画面转向，空格闪避，Esc 暂停。触屏可用左�
 
 实战 GLB 烘焙后运行 `node tools/compress-battle.mjs dist/art/battle/*.glb`，贴图会转成 WebP，法线、UV 和蒙皮权重会被量化，需要 PATH 中有 `cwebp`。已压缩的文件会被跳过。标题页打开后即在后台预载战斗模型。
 
+## 玩法介绍视频
+
+`tools/trailer/` 用脚本自动录制玩法介绍视频：开场以钟馗啖鬼引入，用角色图鉴环视逐一介绍角色，说明游戏由 AI 制作、基于 Three.js，再依次演示三职业大招、敌人、糯米阵、请神八招与法宝。旁白为火山「广西远舟」方言音色，台词在 `tools/trailer/narration.json`。先启动本机服务器，然后依次运行：
+
+```sh
+node tools/build-voices.mjs --table tools/trailer/narration.json --out trailer/voice
+node tools/trailer/record.cjs
+node tools/trailer/mix.cjs
+```
+
+录制在无头 Chrome 中逐帧推进游戏（每帧 1/30 秒）并截图，字幕与介绍卡直接画在页面上；混音脚本把游戏音效离线渲染后，与旁白、台词、背景小调按时间轴混合，旁白出现时游戏声音自动压低。需要本机 Chrome、可解析的 `playwright-core`（可用 `PLAYWRIGHT` 环境变量指定）和 ffmpeg。
+
 调试时在地址后加 `?debug`，控制台可用 `daofa.pause()` 暂停，再用 `daofa.debugAdvance(秒数, 'thunder')` 施放技能并逐帧推进，方便对照大招每一拍的画面。
 
 ## 角色与定稿对照

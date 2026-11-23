@@ -11,8 +11,11 @@ import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
-const {speakers,lines}=JSON.parse(readFileSync(join(root,'tools/voices.json'),'utf8'));
-const out=join(root,'dist/voice'),cache=join(root,'tools/.voice-cache');
+// --table 指定其他台词表、--out 指定输出目录（如玩法介绍视频的旁白）。
+const flag=name=>{const i=process.argv.indexOf(name);if(i<0)return null;const v=process.argv[i+1];process.argv.splice(i,2);return v;};
+const tableFile=flag('--table'),outDir=flag('--out');
+const {speakers,lines}=JSON.parse(readFileSync(tableFile?join(process.cwd(),tableFile):join(root,'tools/voices.json'),'utf8'));
+const out=outDir?join(process.cwd(),outDir):join(root,'dist/voice'),cache=join(root,'tools/.voice-cache');
 mkdirSync(out,{recursive:true});mkdirSync(cache,{recursive:true});
 const indexFile=join(out,'index.json');
 const index=existsSync(indexFile)?JSON.parse(readFileSync(indexFile,'utf8')):{};
@@ -60,6 +63,7 @@ function hell(main,under,drive){
 // Natural voices need only a touch of room; the spirits keep their colour.
 const chains={
   master:'highpass=f=80,aecho=0.9:0.4:32|61:0.10|0.06',
+  dry:'highpass=f=70',
   // 钟馗：略降调、加厚低频、轻微过载出「吼」的颗粒，再接殿堂式长回声。
   deity:`asetrate=${SR}*0.9,aresample=${SR},atempo=1.06,lowshelf=g=6:f=140,volume=5dB,asoftclip=type=tanh,aecho=0.8:0.72:80|170|300:0.34|0.24|0.15`,
   // 钟馗·地狱霸者：主声降调，叠一层低八度的暗声做「双重嗓」，压低频、过载出咆哮颗粒，再接深长回声。

@@ -128,7 +128,7 @@ async function start(){
   if(opening)return;audio.init();audio.sound('chime',.42);hideDialog();play.disabled=true;classButtons.forEach(b=>b.disabled=true);$('loading').textContent='正在开启法坛…';
   opening=(async()=>{try{
     if(!game){const {createCombat}=await import('./combat.js');game=await createCombat($('world'),ui,audio,chosen);}
-    if(new URLSearchParams(location.search).has('debug'))window.daofa=game;
+    if(new URLSearchParams(location.search).has('debug')){window.daofa=game;window.daofaShell={choose,screen,audio,hideDialog};}
     await game.selectClass(chosen);screen('play');game.start();
   }catch(error){console.error('义庄载入失败',error);screen('title');panel('error','槐阴义庄','法坛未能开启','<p>请重试载入角色。若画面持续无法打开，请确认浏览器已开启 WebGL 2 图形加速。</p>',[['重试',start],['返回',hideDialog]]);}
   finally{$('loading').textContent='';play.disabled=false;classButtons.forEach(b=>b.disabled=false);}})();await opening;opening=null;

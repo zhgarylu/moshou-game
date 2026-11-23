@@ -672,8 +672,11 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   // ?debug: step a paused fight by fixed frames so spell beats can be captured exactly.
   function debugAdvance(seconds,cast,move){
     if(state!=='paused')return false;state='play';if(cast){cool[cast]=0;if(cast==='summon')seals=3;skill(cast,null,move);}
-    for(let left=seconds;left>1e-5&&state==='play';left-=1/60)step(Math.min(left,1/60));
+    // 逐帧推进时顶帧同样生效：按「真实」秒数推进，顶帧期间游戏时间放慢到两成。
+    for(let left=seconds;left>1e-5&&state==='play';left-=1/60){
+      let h=Math.min(left,1/60);if(hitstop>0){hitstop-=h;h*=.2;}step(h);
+    }
     atmosphere.render(scene,cam,surge,dim);if(state==='play')state='paused';return true;
   }
-  return {start,pause,resume,leave,selectClass,skill,keys,joy,debugAdvance,debugScene:scene,debugGod(v){godMode=!!v;},get state(){return state;}};
+  return {start,pause,resume,leave,selectClass,skill,keys,joy,debugAdvance,debugScene:scene,debugGod(v){godMode=!!v;},debugView({yaw:y,pitch:p}={}){if(y!==undefined)yaw=y;if(p!==undefined)pitch=p;},debugInfo(){return {t,yaw,hp,seals,state,enemies:enemies.filter(e=>e.hp>0).map(e=>({type:e.type,x:e.actor.root.position.x,z:e.actor.root.position.z}))};},get state(){return state;}};
 }
