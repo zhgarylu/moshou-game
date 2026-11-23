@@ -51,3 +51,13 @@ body[data-discipline=ward] #cover{background-image:url('./art/ward-court.jpg')}
 .relic-card p{margin:0;font-size:14px;line-height:1.7;color:#4a2a14}
 .relic-card kbd{position:absolute;right:10px;top:8px;font:700 13px Georgia,serif;color:#9a3827;background:none;border:1px solid #9a382777;padding:0 6px;border-radius:3px}
 @media (max-width:720px){.relic-card{width:100%;max-width:340px;min-height:0;display:grid;grid-template-columns:52px 1fr;column-gap:12px}.relic-card canvas{grid-row:span 3}.relic-card p{grid-column:1/-1}}
+
+/* 招名大字：请神出招时屏幕中央泼墨亮出招名，颜色随招式变化。 */
+#move-splash{position:absolute;left:50%;top:34%;z-index:6;pointer-events:none;transform:translate(-50%,-50%);display:grid;place-items:center;opacity:0;--hue:#ff5a3a}
+#move-splash i{position:absolute;width:min(78vw,620px);height:clamp(90px,16vw,150px);background:radial-gradient(ellipse 50% 42% at 50% 50%,#0b0606f2 40%,#0b060600 72%),linear-gradient(100deg,transparent 4%,var(--hue) 9%,var(--hue) 88%,transparent 95%);
+  -webkit-mask:radial-gradient(ellipse 52% 46% at 50% 52%,#000 60%,transparent 78%);mask:radial-gradient(ellipse 52% 46% at 50% 52%,#000 60%,transparent 78%);opacity:.85;transform:skewX(-12deg)}
+#move-splash b{position:relative;font:900 clamp(44px,9vw,96px)/1 var(--serif);letter-spacing:.18em;color:#fff4dc;text-shadow:0 0 18px var(--hue),0 0 42px var(--hue),0 4px 0 #000}
+#move-splash small{position:relative;margin-top:8px;font:600 clamp(13px,2vw,17px) var(--serif);letter-spacing:.5em;color:#ffe9c0;text-shadow:0 0 10px var(--hue),0 2px 2px #000}
+#move-splash.show{animation:splash 1.5s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes splash{0%{opacity:0;transform:translate(-50%,-50%) scale(1.9)}12%{opacity:1;transform:translate(-50%,-50%) scale(.96)}20%{transform:translate(-50%,-50%) scale(1.02)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-56%) scale(1.04)}}
+@media (prefers-reduced-motion:reduce){#move-splash.show{animation-duration:.01s}}

@@ -848,7 +848,7 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
         aura.scale.setScalar(9*rise);aura.material.opacity=.55*rise*(1-gone);
         for(const e of eyes){e.scale.setScalar(1.6+2.4*bite*(1-gone)+.4*Math.sin(t*20));e.material.opacity=rise*(1-gone);}
         if(u>=.76&&!fx.bit){fx.bit=true;const g=p.clone().setY(0);blast(g,0xff2a10,4.5,.55);blast(g,0x2a0000,6,.8);
-          sparks(p.clone().setY(p.y+1),90,0x9a0806,7,.9,5);sparks(p.clone().setY(p.y+1),40,0xffc860,5,.6,6);feedback('devour',1.2);feedback('thunder',.6);}
+          sparks(p.clone().setY(p.y+1),90,0x9a0806,7,.9,5);sparks(p.clone().setY(p.y+1),40,0xffc860,5,.6,6);feedback('devour',1.2);feedback('thunder',.6);feedback('hitstop',.35);dread(p.clone().setY(0));}
       };
     });
   }
@@ -885,6 +885,38 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
         col.material.opacity=.75*k;col.scale.set(1+.4*(1-k),1,1+.4*(1-k));foot.material.opacity=k;}};
     });
   }
+  // 啖鬼：朱门里甩出三条血链锁住猎物，一路拖到鬼口前。
+  function chains(from,getTo,life=1){
+    track(life,fx=>{let next=0;fx.step=t=>{
+      while(t>=next&&!fx.dead){next+=.07;const to=getTo();if(!to)return;
+        for(let k=0;k<2;k++)flash(from.clone().add(v3(between(-.6,.6),3+between(-.4,.4),0)),to.clone(),k?0x5a0000:0xff2a18,.8);}
+    };});
+  }
+  // 吞下之后，血色恐惧波扫过整个院子，地面飘起余烬。
+  function dread(at){
+    blast(at,0xff1a10,13,.9);blast(at,0x300000,15,1.2);
+    for(let i=0;i<10;i++){const a=i/10*TAU,r=between(2,9);sparks(at.clone().add(v3(Math.cos(a)*r,.1,Math.sin(a)*r)),14,i%2?0xff3a10:0x601008,2.4,1.4,-1.2);}
+  }
+  // 朱笔勾名：被勾的名字在阴差头顶烧成灰，满院落下朱墨雨。
+  const nameMaps={};
+  function burnName(pos,name){
+    nameMaps[name]??=paint(256,512,(g,w,h)=>{g.fillStyle='rgba(30,4,4,.75)';g.fillRect(48,0,160,h);g.strokeStyle='#ffcf7a';g.lineWidth=5;g.strokeRect(54,6,148,h-12);
+      Array.from(name).forEach((c,i)=>brush(g,c,w/2,90+i*150,120,'#ffe7b0'));});
+    track(2.2,fx=>{
+      const tag=new THREE.Sprite(fx.own(new THREE.SpriteMaterial({map:nameMaps[name],transparent:true,depthWrite:false,toneMapped:false})));fx.group.add(tag);
+      const fire=glow(fx,fx.group,v3(),0xff4a10);
+      fx.step=t=>{const burn=smooth(.5,1.6,t);tag.position.set(pos.x,4.6+1.2*t,pos.z);tag.scale.set(1.1*(1-.4*burn),2.2*(1-burn),1);tag.material.opacity=smooth(0,.15,t)*(1-burn);
+        tag.material.color.setRGB(1,1-burn*.7,1-burn);fire.position.copy(tag.position);fire.scale.setScalar(2.6*Math.sin(PI*Math.min(1,t/1.6)));fire.material.opacity=.8*(1-smooth(1.4,2.2,t));};
+    });
+  }
+  function inkRain(at){
+    for(let i=0;i<9;i++){const a=between(0,TAU),r=between(0,8);sparks(at.clone().add(v3(Math.cos(a)*r,9,Math.sin(a)*r)),16,i%3?0xd0101a:0x200404,1.2,1.3,14);}
+  }
+  // 五鬼脚下的五色光环，跟着小鬼跑。
+  function footRing(getPos,color,life){
+    track(life,fx=>{const r=surface(fx,fx.group,v3(0,.08,0),2.2,seals.summon,color);
+      fx.step=t=>{const p=getPos();if(!p)return;fx.group.position.set(p.x,0,p.z);r.rotation.z=t*3;r.material.opacity=.85*smooth(0,.3,t)*(1-smooth(life-.6,life,t));};});
+  }
   function summon(target,onSlash=()=>{},variant='slash') {
     const look=judgeLooks[variant]||judgeLooks.slash;
     const aim=clampFloor(target);
@@ -910,7 +942,7 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
       let ledger=null,stroke=null,vortex=null,brushPen=null;
       if(variant==='brush'){
         // 生死簿悬在朱门一侧、与钟馗头部齐高，正对镜头展开。
-        const book=new THREE.Group();book.position.set(-5.6,5.2,1.6);book.rotation.y=.42;book.scale.setScalar(1.35);stage.add(book);
+        const book=new THREE.Group();book.position.set(-6.4,5.6,1.8);book.rotation.y=.42;book.scale.setScalar(1.9);stage.add(book);
         // 一支比人还高的朱笔，随勾名那一下横扫过整页。
         brushPen=new THREE.Group();book.add(brushPen);
         mesh(brushPen,fx.own(new THREE.CylinderGeometry(.07,.09,2.4,10)),basic(fx,0x3a1a10,false),0,1.4,0);
@@ -976,8 +1008,8 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
           const extra={origin:origin.clone(),scroll:ledger?ledger.getWorldPosition(v3()):null};
           if(variant==='slash'){slashTrail(aim,yaw);feedback('slash',1);}
           else if(variant==='devour'){blast(aim,0xff3a22,5.2,.7);scorch(aim,3.4);feedback('devour',1);}
-          else if(variant==='brush'){feedback('slash',.7);}
-          else {pillars(origin);blast(origin,0x6dffc0,4.6,.6);sparks(origin.clone().setY(1.2),90,0x9dffd8,6,1,4);feedback('gong',.9);}
+          else if(variant==='brush'){feedback('slash',.7);feedback('hitstop',.3);inkRain(aim);}
+          else {pillars(origin);feedback('hitstop',.2);blast(origin,0x6dffc0,4.6,.6);sparks(origin.clone().setY(1.2),90,0x9dffd8,6,1,4);feedback('gong',.9);}
           onSlash(aim.clone(),extra);
         }
         if(ledger){
@@ -1041,5 +1073,6 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
     } finally {preparing=false;}
   }
   const rites=makeRites(kit,actors.priest,camera);
-  return {thunder,summon,maw,strike,castTrails:ritual.castTrails,priest:ritual.invoke,rites,beam,bolt,mark,rice,dodge,hit,update,clear,forClass,prime};
+  function impLand(p,color){blast(p,color,3.2,.45);sparks(p.clone().setY(.3),30,color,4.5,.6,8);feedback('stone',.8);}
+  return {thunder,summon,maw,strike,chains,burnName,footRing,impLand,castTrails:ritual.castTrails,priest:ritual.invoke,rites,beam,bolt,mark,rice,dodge,hit,update,clear,forClass,prime};
 }

@@ -69,6 +69,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   const punch=new THREE.DirectionalLight(0xd5eeff,0);punch.position.set(-4,14,2);scene.add(punch);
   const spellLight=new THREE.PointLight(0xb3edff,0,20,1.6);scene.add(spellLight);
   const fx=makeEffects(scene,(kind,power=1)=>{
+    if(kind==='hitstop'){hitstop=Math.max(hitstop,power);return;}
     audio.sound(kind,power);
     if(['thunder','slash','gong','rumble','sealStrike','devour'].includes(kind)){
       const amp=kind==='devour'?.42:kind==='thunder'?.19:kind==='slash'||kind==='sealStrike'?.33:kind==='gong'?.1:.08;
@@ -90,7 +91,8 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   let wardHp=0,wardTime=0,envoyKills=0,tetherEnemy=null,tetherTime=0;
   function breakTether(){tetherEnemy=null;tetherTime=0;enemySigns.tether(null);}
   function dismiss(e){e.ring.visible=false;e.sign?.hide();}
-  let godMode=false,inkLines=[],imps=[],possessed=0,spokeHurt=false,mods=freshMods(),picked=[],nextRelic=0,nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
+  const IMP_COLORS=[0x3fe0a0,0xff5030,0xf4f0e4,0x7a66ff,0xffc040];
+  let hitstop=0,godMode=false,inkLines=[],imps=[],possessed=0,spokeHurt=false,mods=freshMods(),picked=[],nextRelic=0,nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
   let castPose='attack',castYaw=0,evade=0,focus=null,focusLife=0,focusSpan=0,focusRite=false,focusGate=false,dim=0,primary=null,bannerTime=0,msgTime=0,hudTick=0,loopId=0,prev=0,activeTouch=null;
   const velocity=V(),masterMotion={};
   // Retina screens rarely need full 2x for a 3D scene; adapt down to 0.85 when frames drop.
@@ -302,7 +304,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       if(!priest)fx.castTrails(invoking?'summon':classId,castingHand,at);
       if(priest){
         priestCount++;cool.priest=mods.priestCd;
-        const m=priestMoves.find(x=>x.key===move);banner(m.name,'一眉道长 · '+m.tag,3.1);
+        const m=priestMoves.find(x=>x.key===move);banner(m.name,'一眉道长 · '+m.tag,3.1);ui.splash(m.name,'一眉道长 · '+m.tag,m.hue);
         audio.voice('summon.priest',{channel:'summon'});audio.voice('priest.'+move,{channel:'priest',delay:1.25});
         if(move==='stars')fx.priest(at,(p,hit)=>area(p,hit.radius,hit.damage,hit.stun,hit===sevenStars.gather?0xa9dfff:0xffd784),yaw);
         else if(move==='ink'){focusLife=focusSpan=3.3;fx.rites.ink(pos.clone(),at,(lines,life)=>{
@@ -328,7 +330,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         else{focusLife=focusSpan=2.2;fx.rites.possess(()=>pos,yaw,()=>{possessed=8;fx.rites.aura(()=>pos,8,()=>yaw);hp=Math.min(100,hp+10);notice('茅山神打 · 掌心引雷',2);syncHud();});}
       }else if(invoking){
         summonCount++;seals=0;sealCharge=0;cool.summon=7;
-        const m=judgeMoves.find(x=>x.key===move);banner(m.name,'三印请神 · 钟馗',3.25);
+        const m=judgeMoves.find(x=>x.key===move);banner(m.name,'三印请神 · 钟馗',3.25);ui.splash(m.name,'钟馗 · '+m.tag,m.hue);
         // 广西远舟喊人，钟馗应声，收招时再喝一句本招台词。
         audio.voice('summon.judge',{channel:'summon'});audio.voice('judge.arrive',{channel:'judge',delay:1.1});
         // 啖鬼先锁定猎物：场上生命最多的敌人，阴差优先。
@@ -338,13 +340,13 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
           audio.voice('judge.'+move,{channel:'judge'});
           if(move==='slash')area(p,7.3,235,2.15);
           else if(move==='devour'){
-            if(prey&&prey.hp>0){const r=prey.actor.root;fx.maw(()=>r.position.clone().setY(r.position.y+1.2),1.1);prey.devourFrom=null;prey.devour=1.1;prey.stagger=0;dismiss(prey);if(prey===tetherEnemy)breakTether();}
+            if(prey&&prey.hp>0){const r=prey.actor.root;fx.maw(()=>r.position.clone().setY(r.position.y+1.2),1.1);fx.chains(extra.origin,()=>prey.devour>0?r.position.clone().setY(r.position.y+1):null,.85);prey.devourFrom=null;prey.devour=1.1;prey.stagger=0;dismiss(prey);if(prey===tetherEnemy)breakTether();}
             area(p,3.2,40,1,0xff5a3a);hp=Math.min(100,hp+20);notice('钟馗啖鬼 · 回元 20',1.8);syncHud();
           }else if(move==='brush'){
             let struck=0;
             for(const e of enemies)if(e.hp>0&&e.type>=BLACK){
               struck++;if(e===tetherEnemy)breakTether();dismiss(e);e.stage='chase';e.wait=Math.max(e.wait,6);
-              damageEnemy(e,Math.ceil(e.max*.35/mods.dmg),1.4);fx.strike(e.actor.root.position.clone());
+              damageEnemy(e,Math.ceil(e.max*.35/mods.dmg),1.4);fx.strike(e.actor.root.position.clone());fx.burnName(e.actor.root.position.clone(),e.type===BLACK?'黑無常':'白無常');
             }
             area(p,5,30,.6,0xff3b24);notice(struck?'生死簿上 · 勾去其名':'簿上暂无阴差之名',1.8);
           }else spawnImps(extra.origin);
@@ -474,9 +476,17 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   }
   function spawnImps(origin){
     for(let i=0;i<5;i++){
-      const actor=makeImpActor(i),a=i/5*Math.PI*2;actor.root.scale.setScalar(1.7);
-      actor.root.position.set(clamp(origin.x+Math.cos(a)*1.4,-14,14),0,clamp(origin.z+1.5+Math.sin(a)*.8,-12,12));scene.add(actor.root);
-      imps.push({actor,life:10,cd:.3+i*.1,swing:0,seed:i*1.3});
+      const actor=makeImpActor(i),a=i/5*Math.PI*2;actor.root.scale.setScalar(1.3);
+      // 从朱门里依次蹦出，划一道彩色弧线砸进战场。
+      const from=V(clamp(origin.x+Math.cos(a)*1.2,-14,14),0,clamp(origin.z+1+Math.sin(a)*.6,-12,12));
+      // 落点：优先砸在活着的敌人身边，否则落在玩家前方，不落在镜头与玩家之间。
+      const foe=enemies.filter(e=>e.hp>0&&!e.devour)[i];
+      const ahead=V(pos.x-Math.sin(yaw)*4.5,0,pos.z-Math.cos(yaw)*4.5);
+      const base=foe?foe.actor.root.position:ahead;
+      const land=V(clamp(base.x+Math.cos(a)*1.3,-14,14),0,clamp(base.z+Math.sin(a)*1.3,-12,12));
+      actor.root.position.copy(from);scene.add(actor.root);
+      const m={actor,life:10,cd:.3+i*.1,swing:0,seed:i*1.3,leap:{from,land,t:-i*.12,dur:.75},trail:0,color:IMP_COLORS[i]};imps.push(m);
+      fx.footRing(()=>m.life>0&&!m.leap?actor.root.position:null,IMP_COLORS[i],10.8);
     }
     notice('五鬼听令 · 追打群邪',1.8);
   }
@@ -487,6 +497,14 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     for(let i=imps.length-1;i>=0;i--){
       const m=imps[i],root=m.actor.root;m.life-=dt;m.cd-=dt;m.swing=Math.max(0,m.swing-dt);
       if(m.life<=0){fx.hit(root.position,0xffd27a);root.removeFromParent();imps.splice(i,1);continue;}
+      if(m.leap){
+        const L=m.leap;L.t+=dt;const u=clamp(L.t/L.dur,0,1);
+        root.position.lerpVectors(L.from,L.land,u);root.position.y=5*Math.sin(Math.PI*u);
+        m.trail-=dt;if(u>0&&m.trail<=0){m.trail=.05;fx.hit(root.position.clone().setY(root.position.y-.6),m.color);}
+        m.actor.animate('attack',t+m.seed,u);
+        if(u>=1){m.leap=null;root.position.y=0;fx.impLand(root.position.clone(),m.color);area(root.position,2.2,18,.6,m.color);}
+        continue;
+      }
       let best=null,bd=Infinity;for(const e of enemies){if(e.hp<=0||e.devour)continue;const d=e.actor.root.position.distanceTo(root.position);if(d<bd){bd=d;best=e;}}
       if(best){
         tmp.copy(best.actor.root.position).sub(root.position).setY(0);root.rotation.y=Math.atan2(tmp.x,tmp.z);
@@ -514,7 +532,9 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         root.rotation.y+=dt*9;root.scale.setScalar((e.type===2?1.18:1)*(1-.25*grab-.65*gulp));
         if(Math.random()<dt*14)fx.hit(root.position.clone().setY(root.position.y-.6),0x9b1410);
         e.actor.animate('hit',t+e.seed,.5,localMotion(e.motion,root,fromX,fromZ,fromYaw,dt));
-        if(e.devour<=0){e.devourFrom=null;fx.hit(root.position,0x9b1410);damageEnemy(e,99999,1);root.visible=false;e.dead=1.2;}
+        if(e.devour<=0){e.devourFrom=null;fx.hit(root.position,0x9b1410);damageEnemy(e,99999,1);root.visible=false;e.dead=1.2;
+          // 群鬼被这一口吓住，全场僵直。
+          for(const o of enemies)if(o!==e&&o.hp>0&&!o.devour){o.stagger=o.staggerSpan=Math.max(o.stagger,1.4);dismiss(o);if(o===tetherEnemy)breakTether();}notice('钟馗啖鬼 · 群邪震慑',1.6);}
         continue;
       }
       e.exposed=Math.max(0,e.exposed-dt);e.inkSafe=Math.max(0,e.inkSafe-dt);
@@ -636,6 +656,8 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       if(Math.abs(previous-pixelScale)>.001)resize();
       perfTime=perfCount=0;
     }
+    // 顶帧：招式命中瞬间时间放慢到两成，按真实时间计时。
+    if(hitstop>0){hitstop-=dt;dt*=.2;}
     let left=dt;while(left>.00001&&state==='play'){const chunk=Math.min(left,.05);step(chunk);left-=chunk;}
     atmosphere.render(scene,cam,surge,dim);if(state==='play')loopId=requestAnimationFrame(frame);
   }

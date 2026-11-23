@@ -7,7 +7,7 @@ const ease=(a,b,t)=>T.MathUtils.smoothstep(t,a,b);
 
 export function makeRites(kit,makePriest,camera=null){
   const {track,basic,mesh,surface,glow,blast,sparks,feedback,sealMap,ground,paint,flash,glyph}=kit;
-  const pool=[];let baguaMap=null,beamMap=null,auraSeal=null,inkMap=null,inkSeal=null,mirrorSeal=null;
+  const pool=[];let splatMap=null,baguaMap=null,beamMap=null,auraSeal=null,inkMap=null,inkSeal=null,mirrorSeal=null;
   function textures(){
     if(baguaMap)return;
     baguaMap=paint(512,512,(g,w,h)=>{
@@ -23,6 +23,10 @@ export function makeRites(kit,makePriest,camera=null){
       g.fillStyle='#fff';g.beginPath();g.arc(0,29,9,0,tau);g.fill();g.fillStyle='#1b1410';g.beginPath();g.arc(0,-29,9,0,tau);g.fill();
     });
     beamMap=paint(64,256,(g,w,h)=>{const r=g.createLinearGradient(0,0,0,h);r.addColorStop(0,'rgba(255,240,190,0)');r.addColorStop(.15,'rgba(255,226,150,.9)');r.addColorStop(1,'rgba(255,200,90,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
+    splatMap=paint(256,256,(g,w,h)=>{g.translate(w/2,h/2);g.fillStyle='rgba(14,8,4,.92)';
+      g.beginPath();for(let i=0;i<=40;i++){const a=i/40*tau,r=70+28*Math.sin(i*2.7)+18*Math.cos(i*5.1);g.lineTo(Math.cos(a)*r,Math.sin(a)*r);}g.fill();
+      for(let i=0;i<22;i++){const a=Math.random()*tau,r=80+Math.random()*40;g.beginPath();g.arc(Math.cos(a)*r,Math.sin(a)*r,3+Math.random()*10,0,tau);g.fill();}
+      g.strokeStyle='rgba(255,200,110,.7)';g.lineWidth=3;g.beginPath();g.arc(0,0,52,0,tau);g.stroke();});
     auraSeal=sealMap('神','#ffd77a');inkSeal=sealMap('墨','#f2d08a');mirrorSeal=sealMap('照','#fff0b0');
     inkMap=paint(256,32,(g,w,h)=>{g.fillStyle='#120c08';g.fillRect(0,10,w,12);g.fillStyle='rgba(18,12,8,.6)';for(let x=0;x<w;x+=7)g.fillRect(x,8+Math.random()*4,4,16-Math.random()*6);});
   }
@@ -70,9 +74,10 @@ export function makeRites(kit,makePriest,camera=null){
         const charms=[.25,.5,.75].map(u=>({u,paper:glyph(fx,fx.group,6,1.05,.46)}));
         return {core,flat,halo,pins,charms,len,start,end};
       });
-      let snapped=false;
+      let snapped=false;const splats=[];
       fx.step=(t,dt)=>{
         priest(t,dt);floor(t);
+        for(const sp of splats){sp.material.opacity=.85*(1-ease(life-1,life,t));sp.rotation.z+=dt*.05;}
         const reach=ease(snap-.35,snap,t),fade=1-ease(life-.8,life,t);
         for(const p of parts){
           const k=Math.max(.001,reach);
@@ -88,7 +93,13 @@ export function makeRites(kit,makePriest,camera=null){
         }
         if(!snapped&&t>=snap&&!fx.dead){
           snapped=true;feedback('inkSnap',1);
-          for(const p of parts){for(let i=1;i<=4;i++){const q=p.start.clone().lerp(p.end,i/5);sparks(q,22,0x140c06,4,.7,6);blast(q.clone().setY(0),0xffd27a,1.6,.35);}}
+          feedback('hitstop',.25);feedback('thunder',.5);
+          for(const p of parts){
+            // 金雷沿墨线一路疾走，线上每段炸开墨花，线中央泼下一大摊墨。
+            for(let k=0;k<3;k++)flash(p.start.clone().setY(.6),p.end.clone().setY(.6),k?0xffe6a0:0xffc040,.9);
+            for(let i=1;i<=4;i++){const q=p.start.clone().lerp(p.end,i/5);sparks(q,26,0x140c06,4.5,.8,6);blast(q.clone().setY(0),0xffd27a,1.8,.35);}
+            splats.push(surface(fx,fx.group,p.start.clone().lerp(p.end,.5).setY(.06),4.2,splatMap,0xffffff,false));
+          }
           onSnap(parts.map(p=>({a:p.start.clone().setY(0),b:p.end.clone().setY(0)})),life-snap);
         }
       };
@@ -105,13 +116,21 @@ export function makeRites(kit,makePriest,camera=null){
       // 照出去的那一刻，目标处地面投出一面巨大的八卦。
       const spot=aim.clone().setY(.08),projection=surface(fx,fx.group,spot,9,baguaMap,0xffe6a0);
       const disc=mesh(fx.group,ground,basic(fx,0xffffff,false,baguaMap),0,0,0,1.5,1.5,1);
+      // 道长身后升起一面巨大的八卦光轮；照中时目标四周立起八道卦象光柱。
+      const wheel=mesh(fx.group,ground,basic(fx,0xffe6a0,true,baguaMap),0,0,0,1,1,1);
+      const pillarsGeo=fx.own(new T.CylinderGeometry(.32,.45,8,14,1,true));
+      const pillars=Array.from({length:8},(_,i)=>{const a=i/8*tau;return mesh(fx.group,pillarsGeo,basic(fx,0xffd27a),spot.x+Math.cos(a)*5,4,spot.z+Math.sin(a)*5);});
       const shineGlow=glow(fx,fx.group,V(),0xfff0b0);
       const cone=new T.Mesh(fx.own(new T.ConeGeometry(Math.tan(spread)*range,range,40,1,true)),basic(fx,0xffe08a,true,beamMap));
       cone.material.side=T.DoubleSide;fx.group.add(cone);
       let fired=false;const mouth=V();
       fx.step=(t,dt)=>{
         const actor=priest(t,dt),raise=ease(.7,1.25,t),fade=1-ease(life-.7,life,t);floor(t);
-        const cast=ease(shine,shine+.25,t);projection.material.opacity=.85*cast*fade;projection.rotation.z=-t*1.2;projection.scale.setScalar(9*(.6+.4*cast));
+        wheel.position.copy(actor.position).addScaledVector(dir,-.8);wheel.position.y=3.2;wheel.rotation.set(0,yaw+Math.PI,0);wheel.rotateZ(-t*.8);
+        wheel.scale.setScalar(5.5*raise);wheel.material.opacity=.55*raise*fade;
+        const cast=ease(shine,shine+.25,t);
+        pillars.forEach((pl,i)=>{const k=ease(shine+i*.04,shine+.2+i*.04,t)*(1-ease(life-.9,life,t));pl.material.opacity=.6*k;pl.scale.set(1,Math.max(.01,k),1);pl.position.y=4*k;});
+        projection.material.opacity=.85*cast*fade;projection.rotation.z=-t*1.2;projection.scale.setScalar(9*(.6+.4*cast));
         mouth.copy(actor.position).addScaledVector(dir,.6);mouth.y=1.7+1.1*raise;
         disc.position.copy(mouth);disc.rotation.set(0,yaw+Math.PI,0);disc.rotateZ(t*2.4);disc.material.opacity=ease(.3,.8,t)*fade;
         disc.scale.setScalar(1.1+.5*raise);
@@ -120,22 +139,27 @@ export function makeRites(kit,makePriest,camera=null){
         const aimDown=dir.clone().setY(-(mouth.y-.9)/range).normalize();
         cone.position.copy(mouth).addScaledVector(aimDown,range/2);cone.quaternion.setFromUnitVectors(V(0,-1,0),aimDown);
         const beamOn=t>shine?Math.exp(-(t-shine)*1.2):0;cone.material.opacity=.85*beamOn*fade;cone.visible=t>shine;
-        if(!fired&&t>=shine&&!fx.dead){fired=true;feedback('mirror',1);blast(mouth.clone().setY(.1),0xffe3a0,2.4,.4);onFlash(mouth.clone().setY(0),dir.clone(),range,spread);}
+        if(!fired&&t>=shine&&!fx.dead){fired=true;feedback('mirror',1);feedback('hitstop',.25);blast(mouth.clone().setY(.1),0xffe3a0,2.4,.4);onFlash(mouth.clone().setY(0),dir.clone(),range,spread);}
       };
     });
   }
   // 茅山神打：道长在玩家身后起手，化作金光没入玩家体内。
   function possess(getPlayer,yaw,onMerge){
     textures();const life=3.2,merge=1.7,player=getPlayer().clone();
-    const back=V(Math.sin(yaw),0,Math.cos(yaw)),at=player.clone().addScaledVector(back,2.2);
+    // 道长站在玩家正前方、面朝玩家施法，不挡镜头。
+    const ahead=V(-Math.sin(yaw),0,-Math.cos(yaw)),at=player.clone().addScaledVector(ahead,3);
     feedback('ritualBell',.7);
     track(life,fx=>{
-      const priest=cameo(fx,at,yaw+Math.PI,merge+.25,{walk:.6,ritualFrom:.6,ritualTo:1.4});
+      const priest=cameo(fx,at,yaw,merge+.25,{walk:.6,ritualFrom:.6,ritualTo:1.4});
       const streak=glow(fx,fx.group,V(),0xffd77a);let merged=false;
+      const spiral=Array.from({length:10},()=>glyph(fx,fx.group,6,1,.44));
       fx.step=(t,dt)=>{
         const actor=priest(t,dt),pull=ease(1.2,merge,t),p=getPlayer();
+        // 十张护身符绕着玩家盘旋上升成柱，合身时一齐炸散。
+        spiral.forEach((s,i)=>{const k=ease(.6+i*.05,merge,t),gone=ease(merge,merge+.3,t),a=t*5+i*tau/10,r=1.4-.5*k+2*gone;
+          s.position.set(p.x+Math.cos(a)*r,.3+k*3.4+i*.12,p.z+Math.sin(a)*r);s.material.opacity=ease(.6+i*.05,.8+i*.05,t)*(1-gone);});
         streak.position.copy(actor.position).lerp(p,pull);streak.position.y=1.3;streak.scale.setScalar(1.5+2.5*pull);streak.material.opacity=ease(1,1.3,t)*(1-ease(merge,merge+.3,t));
-        if(!merged&&t>=merge&&!fx.dead){merged=true;feedback('possess',1);blast(p.clone(),0xffd77a,3.2,.5);sparks(p.clone().setY(1),60,0xffe6a0,4.5,.8,3);onMerge();}
+        if(!merged&&t>=merge&&!fx.dead){merged=true;feedback('possess',1);feedback('hitstop',.3);feedback('thunder',.7);flash(p.clone().setY(24),p.clone().setY(.1),0xffd060,1.5,true);blast(p.clone(),0xffd77a,3.2,.5);sparks(p.clone().setY(1),60,0xffe6a0,4.5,.8,3);onMerge();}
       };
     });
   }

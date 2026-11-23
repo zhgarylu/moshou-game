@@ -121,6 +121,7 @@ const ui={
   target(obj){const tag=$('target-tag');if(!obj){if(visibleTarget)tag.hidden=true;visibleTarget=false;return;}visibleTarget=true;tag.hidden=false;tag.style.left=obj.x+'%';tag.style.top=obj.y+'%';tag.querySelector('span').textContent=obj.label;tag.style.setProperty('--hp',(obj.hp*100)+'%');},
   banner(title,sub){const e=$('cast-banner');e.classList.toggle('show',!!title);e.querySelector('small').textContent=sub;e.querySelector('b').textContent=title;},
   relic:showRelic,choose:showMoves,
+  splash(title,sub,hue){const e=$('move-splash');e.querySelector('b').textContent=title;e.querySelector('small').textContent=sub;e.style.setProperty('--hue',hue);e.classList.remove('show');void e.offsetWidth;e.classList.add('show');},
   notice(msg){$('notice').textContent=msg;$('notice').classList.toggle('show',!!msg);},end
 };
 async function start(){

@@ -148,7 +148,7 @@ function prop(i,mat,trim){
   if(i===0){const b=new THREE.Mesh(new THREE.BoxGeometry(.06,1.1,.02),new THREE.MeshStandardMaterial({color:0xd8e4e8,metalness:.8,roughness:.3}));b.position.y=.55;g.add(b);
     const h=new THREE.Mesh(new THREE.BoxGeometry(.28,.05,.06),trim);g.add(h);}
   if(i===1){const pole=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.3,6),trim);pole.position.y=.6;g.add(pole);
-    const top=new THREE.Mesh(new THREE.ConeGeometry(.75,.35,12,1,true),new THREE.MeshStandardMaterial({color:0x9a1a14,side:THREE.DoubleSide,roughness:.8}));top.position.y=1.25;g.add(top);}
+    const top=new THREE.Mesh(new THREE.ConeGeometry(.48,.26,12,1,true),new THREE.MeshStandardMaterial({color:0x9a1a14,side:THREE.DoubleSide,roughness:.8}));top.position.y=1.25;g.add(top);}
   if(i===2){const stick=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.9,6),trim);stick.position.y=.45;stick.rotation.z=.5;g.add(stick);
     const lamp=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),new THREE.MeshBasicMaterial({color:0xffe9b0}));lamp.scale.y=1.25;lamp.position.set(-.38,.72,0);g.add(lamp);}
   if(i===3){const gourd=new THREE.Group();for(const [y,r] of [[.16,.16],[.4,.11]]){const b=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),new THREE.MeshStandardMaterial({color:0xc89030,roughness:.6}));b.position.y=y;gourd.add(b);}g.add(gourd);}
