@@ -1,0 +1,106 @@
+{
+ "_说明": "玩法介绍视频旁白。由 node tools/build-voices.mjs --table tools/trailer/narration.json --out trailer/voice 生成，音色为火山「广西远舟」。",
+ "speakers": {
+  "narr": {
+   "id": "zh_male_guangxiyuanzhou_moon_bigtts",
+   "resource": "seed-tts-1.0"
+  }
+ },
+ "lines": {
+  "narr.hook": {
+   "rate": 15,
+   "fx": "dry",
+   "text": "老表！义庄闹鬼啦！钟馗大佬，一口一只！"
+  },
+  "narr.hello": {
+   "rate": 10,
+   "fx": "dry",
+   "text": "这款游戏叫《道法世界·义庄惊雷》，先认识一下角色。"
+  },
+  "narr.roster1": {
+   "rate": 10,
+   "fx": "dry",
+   "text": "主角是三位天师：雷法、剑诀、镇坛，各有各的绝招。"
+  },
+  "narr.roster2": {
+   "rate": 10,
+   "fx": "dry",
+   "text": "帮手更厉害：钟馗大佬，还有大家熟悉的英叔——九叔！"
+  },
+  "narr.roster3": {
+   "rate": 10,
+   "fx": "dry",
+   "text": "对面是黑无常、白无常，带着跳僵、纸人、飞头蛮，半夜来勾魂。"
+  },
+  "narr.ai": {
+   "rate": 10,
+   "fx": "dry",
+   "text": "这些角色、建模、动作、特效，连你听到的配音，全部都是AI做出来的！"
+  },
+  "narr.three": {
+   "rate": 10,
+   "fx": "dry",
+   "text": "画面是用Three.js实时渲染的3D，浏览器一打开就能玩，不用下载！"
+  },
+  "narr.story": {
+   "rate": 10,
+   "fx": "dry",
+   "text": "故事发生在槐阴镇义庄，你要做的，就是守住九十秒！"
+  },
+  "narr.thunder": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "先挑职业。雷法天师，五雷正法一落，五道天雷劈下来，僵尸全部焦掉咯！"
+  },
+  "narr.sword": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "剑诀天师，万剑归宗，满天飞剑，最后一把巨剑插下来，好看得很！"
+  },
+  "narr.ward": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "镇坛天师，抬起狮印往地上一砸，地动山摇，还给自己加个护盾。"
+  },
+  "narr.foes": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "敌人也不简单：跳僵、纸人一窝蜂冲过来，飞头蛮从天上扑下来。"
+  },
+  "narr.dodge": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "黑无常地上出红道道，你就往两边闪；白无常画白圈圈，你就赶紧跑出去！"
+  },
+  "narr.rice": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "顶不住咯？按三撒一把糯米，僵尸全部粘在地上，慢得像蜗牛。"
+  },
+  "narr.summon": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "最爽的来咯！集齐三枚天师印，按Q请钟馗，画面一停，四招随便挑！"
+  },
+  "narr.judge": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "啖鬼，一口吞掉最大只的；朱笔勾名，生死簿上直接划掉无常；五鬼听令，五只小鬼帮你打！"
+  },
+  "narr.priest": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "按E请九叔：墨斗封尸、八卦照妖，还有茅山神打，九叔附身，一巴掌一个雷！"
+  },
+  "narr.relic": {
+   "rate": 12,
+   "fx": "dry",
+   "text": "三十秒、六十秒，香案还会送法宝，三选一，每一局都不一样。"
+  },
+  "narr.outro": {
+   "rate": 10,
+   "fx": "dry",
+   "text": "守满九十秒，义庄就安咯！老表，快来一起镇邪，钟馗大佬等你哦！"
+  }
+ }
+}
