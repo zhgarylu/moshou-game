@@ -7,6 +7,7 @@ import {preloadWardRelic} from './ward-effects.js';
 import {actionTiming} from './action-timing.js';
 
 import {disciplines,sevenStars,stickyRice} from './disciplines.js';
+import {relicTimes,freshMods,drawRelics} from './relics.js';
 import {BLACK,WHITE,foes,chargeLength,chargeHalfWidth,prisonRadius,makeEnvoySigns} from './envoys.js';
 
 const clamp=THREE.MathUtils.clamp;
@@ -83,7 +84,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   let wardHp=0,wardTime=0,envoyKills=0,tetherEnemy=null,tetherTime=0;
   function breakTether(){tetherEnemy=null;tetherTime=0;enemySigns.tether(null);}
   function dismiss(e){e.ring.visible=false;e.sign?.hide();}
-  let spokeHurt=false,nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
+  let spokeHurt=false,mods=freshMods(),picked=[],nextRelic=0,nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
   let castPose='attack',castYaw=0,evade=0,focus=null,focusLife=0,focusSpan=0,focusRite=false,focusGate=false,dim=0,primary=null,bannerTime=0,msgTime=0,hudTick=0,loopId=0,prev=0,activeTouch=null;
   const velocity=V(),masterMotion={};
   // Retina screens rarely need full 2x for a 3D scene; adapt down to 0.85 when frames drop.
@@ -130,7 +131,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function banner(s,sub,seconds=1.9){ui.banner(s,sub);bannerTime=seconds;}
   function start(){
     cancelAnimationFrame(loopId);fx.clear();while(enemies.length)release(enemies.pop());keys.clear();joy.x=joy.y=0;
-    Object.assign(cool={},{mark:0,chain:0,rice:0,dodge:0,thunder:0,summon:0,priest:0});spokeHurt=false;t=0;timeLeft=duration;hp=100;seals=3;sealCharge=0;kills=markCount=chainCount=thunderCount=summonCount=priestCount=0;
+    Object.assign(cool={},{mark:0,chain:0,rice:0,dodge:0,thunder:0,summon:0,priest:0});spokeHurt=false;mods=freshMods();picked=[];nextRelic=0;t=0;timeLeft=duration;hp=100;seals=3;sealCharge=0;kills=markCount=chainCount=thunderCount=summonCount=priestCount=0;
     phase=nextWave=0;yaw=0;pitch=.40;shake=surge=dim=hurt=immune=dash=cast=focusLife=focusSpan=hudTick=perfTime=perfCount=0;primary=null;focus=null;focusRite=false;activeTouch=null;
     wardHp=wardTime=envoyKills=followTime=0;basicStrike=null;breakTether();
     pos.set(0,0,5);velocity.set(0,0,0);evade=0;master.root.rotation.set(0,Math.PI,0);master.resetMotion?.();master.animate('idle',0,1);reticle.visible=false;groundMarker.visible=false;hoverPoint=null;
@@ -143,7 +144,18 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function finish(win){
     if(state!=='play')return;state='over';keys.clear();joy.x=joy.y=0;audio.ambience(false);audio.sound(win?'win':'lose');ui.target(null);ui.notice('');ui.banner('','');ui.damage(0);
     if(win)audio.voice(classId+'.win',{delay:.6});
-    ui.end({win,kills,elapsed:Math.min(duration,Math.floor(t)),thunder:thunderCount,summon:summonCount,priest:priestCount,envoys:envoyKills});
+    ui.end({win,kills,relics:picked,elapsed:Math.min(duration,Math.floor(t)),thunder:thunderCount,summon:summonCount,priest:priestCount,envoys:envoyKills});
+  }
+  function offerRelic(){
+    nextRelic++;const choices=drawRelics(classId,picked);if(!choices.length)return;
+    state='relic';keys.clear();joy.x=joy.y=0;activeTouch=null;audio.ambience(false);audio.sound('chime',.9);
+    const context={heal:n=>{hp=Math.min(100,hp+n);},fillSeals:()=>{seals=3;sealCharge=0;}};
+    ui.relic(choices,nextRelic,relic=>{
+      if(state!=='relic')return;
+      picked.push(relic.id);relic.apply(mods,context);audio.sound('seal',1.2);
+      state='play';audio.ambience(true);syncHud();banner(relic.name,'法宝加身',2.2);
+      prev=performance.now();canvas.focus({preventScroll:true});loopId=requestAnimationFrame(frame);
+    });
   }
   function pause(){if(state!=='play')return false;state='paused';keys.clear();joy.x=joy.y=0;activeTouch=null;audio.ambience(false);cancelAnimationFrame(loopId);return true;}
   function resume(){if(state!=='paused')return;state='play';audio.ambience(true);prev=performance.now();canvas.focus({preventScroll:true});loopId=requestAnimationFrame(frame);}
@@ -157,7 +169,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function groundAim(){return V(clamp(pos.x-Math.sin(yaw)*6,-13,13),0,clamp(pos.z-Math.cos(yaw)*6,-11,11));}
   function damageEnemy(e,amount,stun){
     if(e.hp<=0)return;
-    e.hp=Math.max(0,e.hp-amount);
+    e.hp=Math.max(0,e.hp-amount*mods.dmg);
     // A glancing basic attack chips the officials' health while their warning stays readable.
     if(e.hp===0 || e.type<BLACK || stun>=.65){
       e.stagger=e.staggerSpan=Math.max(e.stagger,stun);dismiss(e);e.stage='chase';e.wait=Math.max(e.wait,.35);
@@ -171,7 +183,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         hp+=recovery;
         if(recovery)notice(foes[e.type].name+'已伏 · 回元 '+recovery,1.7);
       }
-      if(seals<3 && ++sealCharge>=2){sealCharge=0;seals++;if(seals===3)notice('三枚天师印已齐，可再次请神。');}
+      if(seals<3 && ++sealCharge>=mods.sealPer){sealCharge=0;seals++;if(seals===3)notice('三枚天师印已齐，可再次请神。');}
     }
   }
   function area(center,radius,amount,stun,color=0xffc97c,after=null){
@@ -217,7 +229,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     at.x=clamp(at.x,-14,14);at.y=0;at.z=clamp(at.z,-12,12);
     if(name==='dodge'){
       cast=followTime=0;
-      movement(dashDir);if(dashDir.lengthSq()<.01)dashDir.set(-Math.sin(yaw),0,-Math.cos(yaw));dashDir.normalize();dash=.27;evade=.44;immune=.52;cool.dodge=2.25;
+      movement(dashDir);if(dashDir.lengthSq()<.01)dashDir.set(-Math.sin(yaw),0,-Math.cos(yaw));dashDir.normalize();dash=.27;evade=.44;immune=.52;cool.dodge=mods.dodgeCd;
       if(tetherEnemy){breakTether();notice('魂链已挣脱',1.2);}
       fx.dodge(pos);audio.sound('dodge');return true;
     }
@@ -225,11 +237,11 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       const p=target?target.actor.root.position.clone():groundAim();
       if(target&&pos.distanceTo(p)>16){notice('靠近敌人再撒糯米。',.9);return false;}
       pose('cast',p);cool.rice=stickyRice.cooldown;audio.voice(classId+'.rice');
-      if(castingHand)castingHand.getWorldPosition(palm);else palm.copy(pos).setY(1.4);fx.rice(palm,p,stickyRice.radius,stickyRice.slow);
+      if(castingHand)castingHand.getWorldPosition(palm);else palm.copy(pos).setY(1.4);fx.rice(palm,p,stickyRice.radius*mods.riceR,stickyRice.slow+mods.riceSlow);
       const at=p.clone();let stuck=0;
       setTimeout(()=>{if(state!=='play')return;for(const e of enemies){
-        if(e.hp<=0||e.actor.root.position.distanceTo(at)>stickyRice.radius)continue;
-        e.slow=stickyRice.slow;stuck++;damageEnemy(e,e.type>=BLACK?stickyRice.envoyDamage:stickyRice.damage,.2);fx.hit(e.actor.root.position,0xfff4d8);
+        if(e.hp<=0||e.actor.root.position.distanceTo(at)>stickyRice.radius*mods.riceR)continue;
+        e.slow=stickyRice.slow+mods.riceSlow;stuck++;damageEnemy(e,e.type>=BLACK?stickyRice.envoyDamage:stickyRice.damage,.2);fx.hit(e.actor.root.position,0xfff4d8);
       }if(stuck)notice('糯米粘尸 · 行动迟缓',1.2);},320);
       syncHud();return true;
     }
@@ -241,9 +253,9 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         markCount++;target.marked=8;
         const release=t+actionTiming(classId,'attack').release,travel=classId==='sword'?.24:classId==='ward'?.20:0;
         basicStrike={target,release,impact:release+travel,launched:false};
-        cool.mark=classId==='ward'?.53:.42;
+        cool.mark=classId==='ward'?.53:classId==='sword'?.42*mods.swordCd:.42;
       }else if(special){
-        chainCount++;cool.chain=classId==='sword'?7.5:8.5;audio.voice(classId+'.chain');
+        chainCount++;cool.chain=classId==='sword'?7.5*mods.swordCd:8.5*mods.wardCd;audio.voice(classId+'.chain');
         banner(spec.chain.name,spec.name,1.8);
         special.thunder(p.clone(),(center,final)=>{
           if(classId==='sword'){
@@ -254,8 +266,8 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         },yaw);
       }else{
         chainCount++;cool.chain=4.4;audio.voice('thunder.chain');let e=target,from=pos;const struck=new Set();
-        for(let i=0;i<4&&e;i++){
-          const ep=e.actor.root.position,tagged=e.marked>0;fx.bolt(from,ep,true);damageEnemy(e,tagged?68:37,.55);e.marked=0;struck.add(e);from=ep;
+        for(let i=0;i<4+mods.chainExtra&&e;i++){
+          const ep=e.actor.root.position,tagged=e.marked>0;fx.bolt(from,ep,true);damageEnemy(e,(tagged?68:37)*mods.chainDmg,.55);e.marked=0;struck.add(e);from=ep;
           let near=null,best=tagged?10:6;for(const other of enemies){const d=ep.distanceTo(other.actor.root.position);if(other.hp>0&&!struck.has(other)&&d<best){near=other;best=d;}}e=near;
         }
         audio.sound('chain');
@@ -269,7 +281,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       pose(invoking?'invoke':'ultimate',at);
       if(!priest)fx.castTrails(invoking?'summon':classId,castingHand,at);
       if(priest){
-        priestCount++;cool.priest=sevenStars.cooldown;audio.voice('summon.priest',{channel:'summon'});audio.voice('priest.invoke',{channel:'priest',delay:1.25});banner('七星伏魔','一眉道长 · 踏罡封符',3.1);
+        priestCount++;cool.priest=mods.priestCd;audio.voice('summon.priest',{channel:'summon'});audio.voice('priest.invoke',{channel:'priest',delay:1.25});banner('七星伏魔','一眉道长 · 踏罡封符',3.1);
         fx.priest(at,(p,hit)=>area(p,hit.radius,hit.damage,hit.stun,hit===sevenStars.gather?0xa9dfff:0xffd784),yaw);
       }else if(invoking){
         summonCount++;seals=0;sealCharge=0;cool.summon=7;banner(spec.summon.name,'三印请神 · 镇宅圣君',3.25);
@@ -277,7 +289,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         audio.voice('summon.judge',{channel:'summon'});audio.voice('judge.arrive',{channel:'judge',delay:1.1});
         fx.summon(at,p=>{audio.voice('judge.slash',{channel:'judge'});area(p,7.3,235,2.15);});
       }else{
-        thunderCount++;cool.thunder=15;banner(spec.thunder.name,spec.thunder.school,3.05);audio.voice(classId+'.ultimate');
+        thunderCount++;cool.thunder=mods.ultCd;banner(spec.thunder.name,spec.thunder.school,3.05);audio.voice(classId+'.ultimate');
         if(classId==='sword'){
           special.summon(at,(center,final)=>{
             if(final)audio.voice('sword.final');
@@ -288,7 +300,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         }else if(classId==='ward'){
           special.summon(at,(center,final)=>{
             if(!final)return;
-            audio.voice('ward.final');area(center,6.8,222,2.7,spec.light);wardHp=28;wardTime=6;notice('狮印护身 · 可抵 28 点伤害',2);
+            audio.voice('ward.final');area(center,6.8,222,2.7,spec.light);wardHp=28+mods.wardShield;wardTime=6;notice('狮印护身 · 可抵 '+wardHp+' 点伤害',2);
           },yaw);
         }else fx.thunder(at,(p,index)=>{if(index===4)audio.voice('thunder.final');area(p,index===4?5.8:3.65,index===4?106:35,index===4?1.2:.38);});
       }
@@ -300,6 +312,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     result.set(x*Math.cos(yaw)+z*Math.sin(yaw),0,-x*Math.sin(yaw)+z*Math.cos(yaw));if(result.lengthSq()>1)result.normalize();return result;}
   function hurtPlayer(amount){
     if(immune>0 || state!=='play')return false;
+    amount=Math.round(amount*mods.taken);
     const absorbed=Math.min(wardHp,amount);wardHp-=absorbed;
     hp=Math.max(0,hp-(amount-absorbed));immune=.5;
     if(absorbed)audio.sound('seal',.6);
@@ -417,7 +430,10 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       foes:present,bound:!!tetherEnemy,shield:wardHp,shieldTime:wardTime});
   }
   function step(dt){
-    if(state!=='play')return;t+=dt;timeLeft=duration-t;for(const k in cool)cool[k]=Math.max(0,cool[k]-dt);
+    if(state!=='play')return;
+    // 香案显灵：到点且没有大招正在演出时，停下战斗请一件法宝。
+    if(nextRelic<relicTimes.length&&t>=relicTimes[nextRelic]&&focusLife<=0){offerRelic();return;}
+    t+=dt;timeLeft=duration-t;for(const k in cool)cool[k]=Math.max(0,cool[k]-dt);
     while(nextWave<waves.length&&waves[nextWave][0]<=t){const [,type,x,z]=waves[nextWave++];spawn(type,x,z);}
     const n=phaseOf();if(n!==phase){phase=n;banner(phaseNames[n].split(' · ')[1],'槐阴义庄 · '+['一','二','三','四'][n]+'更');audio.sound('gong',.42);}
     if(bannerTime>0&&(bannerTime-=dt)<=0)ui.banner('','');if(msgTime>0&&(msgTime-=dt)<=0)ui.notice('');

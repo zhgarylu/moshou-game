@@ -34,3 +34,20 @@ body[data-discipline=ward] #cover{background-image:url('./art/ward-court.jpg')}
 @media(max-width:700px){.spells-list{gap:4px}.lore{gap:4px;padding:5px}.lore canvas{width:26px;height:26px}.lore strong{font-size:14px}.lore small{letter-spacing:0;font-size:9px}}
 @media(pointer:coarse) and (max-width:700px){.battle-bottom{right:7px}.hotbar button{width:clamp(34px,calc((100vw - 112px) / 6),49px)}.hotbar{gap:2px}.hotbar strong{font-size:10px;white-space:nowrap}#joystick{width:65px;height:65px;left:8px}#joystick i{left:19px;top:19px}}
 @media(max-height:570px) and (orientation:landscape){.spells-list .lore{min-width:0}.lore small{display:none}}
+
+#relic-pick{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:16px;background:radial-gradient(ellipse at 50% 45%,#1a1410e6,#03090bf0 70%);backdrop-filter:blur(4px)}
+#relic-pick[hidden]{display:none}
+.relic-head{text-align:center}
+.relic-head small{color:var(--gold);font:13px var(--serif);letter-spacing:.3em}
+.relic-head h2{font:700 clamp(28px,5vw,40px)/1.25 var(--serif);letter-spacing:.14em;margin:6px 0 4px;color:#ffe2a8;text-shadow:0 0 24px #ff9a3a66}
+.relic-head p{margin:0;color:var(--muted);font-size:13px}
+.relic-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:780px}
+.relic-card{position:relative;width:220px;min-height:250px;padding:18px 16px 16px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer;color:#3b1c0c;border:0;
+  background:linear-gradient(175deg,#fbefc8,#efcd83 62%,#d5a24c);box-shadow:inset 0 0 0 2px #9a3827b0,inset 0 0 0 6px #fbefc899,0 14px 34px #000a;transition:transform .14s,box-shadow .14s}
+.relic-card:hover,.relic-card:focus-visible{transform:translateY(-6px) rotate(-.6deg);box-shadow:inset 0 0 0 2px #9a3827,inset 0 0 0 6px #fbefc8cc,0 0 0 2px #ffd99a,0 20px 40px #000c;outline:none}
+.relic-card canvas{width:52px;height:52px;border-radius:3px}
+.relic-card i{font-style:normal;font-size:11px;font-weight:700;padding:1px 9px;border-radius:999px;background:#9a3827;color:#ffe5aa;letter-spacing:.08em}
+.relic-card h3{margin:2px 0 0;font:700 24px/1.3 var(--serif);color:#8f1f14;letter-spacing:.1em}
+.relic-card p{margin:0;font-size:14px;line-height:1.7;color:#4a2a14}
+.relic-card kbd{position:absolute;right:10px;top:8px;font:700 13px Georgia,serif;color:#9a3827;background:none;border:1px solid #9a382777;padding:0 6px;border-radius:3px}
+@media (max-width:720px){.relic-card{width:100%;max-width:340px;min-height:0;display:grid;grid-template-columns:52px 1fr;column-gap:12px}.relic-card canvas{grid-row:span 3}.relic-card p{grid-column:1/-1}}

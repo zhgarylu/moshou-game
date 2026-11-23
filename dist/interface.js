@@ -1,6 +1,7 @@
 import {drawRune,drawIcon} from './runes.js';
 import {makeSound} from './sound.js';
 import {disciplines,sevenStars} from './disciplines.js';
+import {relics} from './relics.js';
 const $=id=>document.getElementById(id),audio=makeSound();
 const skillButtons=[...document.querySelectorAll('[data-skill]')];
 const keyMap={Digit1:'mark',Digit2:'chain',Digit3:'rice',KeyR:'thunder',KeyQ:'summon',KeyE:'priest',Space:'dodge'};
@@ -22,7 +23,7 @@ function panel(kind,kicker,title,body,actions){
   modal.hidden=false;row.firstElementChild.focus({preventScroll:true});
 }
 function continueGame(){hideDialog();game?.resume();}
-function returnToMenu(){hideDialog();game?.leave();screen('title');play.focus({preventScroll:true});}
+function returnToMenu(){hideRelic();hideDialog();game?.leave();screen('title');play.focus({preventScroll:true});}
 function list(items){return '<dl>'+items.map(([k,v])=>'<div><dt>'+k+'</dt><dd>'+v+'</dd></div>').join('')+'</dl>';}
 let chosen = 'thunder';
 const classButtons = [...document.querySelectorAll('[data-class]')];
@@ -76,9 +77,24 @@ loreButtons.forEach(b=>b.onclick=()=>{
   panel('lore',ability.school,ability.name,'<canvas id="detail-rune" class="dialog-art" width="80" height="80"></canvas><p>'+ability.text+'</p><p>'+(slot==='summon'?'Q · 消耗三枚天师印':slot==='priest'?('E · 回气 '+sevenStars.cooldown+' 秒'):'R · 回气 15 秒')+'</p>',[['入庄镇邪',start],['返回',hideDialog]]);
   drawRune($('detail-rune'),ability.icon);
 });
+let relicPick=null;
+function hideRelic(){$('relic-pick').hidden=true;relicPick=null;}
+function showRelic(choices,round,onPick){
+  const box=$('relic-cards');box.replaceChildren();
+  $('relic-kicker').textContent='香案显灵 · 第 '+['一','二','三'][round-1]+' 次';
+  relicPick=i=>{const r=choices[i];if(!r)return;hideRelic();onPick(r);};
+  choices.forEach((r,i)=>{
+    const b=document.createElement('button');b.className='relic-card';
+    b.innerHTML='<kbd>'+(i+1)+'</kbd><canvas width="80" height="80"></canvas><i></i><h3></h3><p></p>';
+    b.querySelector('i').textContent=r.tag;b.querySelector('h3').textContent=r.name;b.querySelector('p').textContent=r.desc;
+    drawRune(b.querySelector('canvas'),r.icon);b.onclick=()=>relicPick?.(i);box.append(b);
+  });
+  $('relic-pick').hidden=false;box.firstElementChild?.focus({preventScroll:true});
+}
 function end(s){
+  hideRelic();
   let best=s.kills;try{best=Math.max(s.kills,Number(localStorage.getItem('daofa-best'))||0);localStorage.setItem('daofa-best',best);}catch{}
-  panel('result','槐阴义庄 · 试炼结算',s.win?'义庄已安':'法坛失守','<p>'+(s.win?'最后一声棺铃归于寂静，义庄的红灯重新亮起。':'法坛已破。看见黑无常的红色冲撞长道时向侧面闪避，白无常的拘魂圈亮起时先走出圈外。')+'</p>'+list([['守坛时间',s.elapsed+' 秒'],['镇邪数',s.kills+' 只 · 最高 '+best+' 只'],[disciplines[chosen].thunder.name,s.thunder+' 次'],['召唤钟馗',s.summon+' 次'],['一眉道长',s.priest+' 次'],['镇伏无常',s.envoys+' 名']]),[['再入义庄',start],['返回山门',returnToMenu]]);
+  panel('result','槐阴义庄 · 试炼结算',s.win?'义庄已安':'法坛失守','<p>'+(s.win?'最后一声棺铃归于寂静，义庄的红灯重新亮起。':'法坛已破。看见黑无常的红色冲撞长道时向侧面闪避，白无常的拘魂圈亮起时先走出圈外。')+'</p>'+list([['守坛时间',s.elapsed+' 秒'],['所得法宝',(s.relics||[]).map(id=>relics.find(r=>r.id===id)?.name).filter(Boolean).join('、')||'无'],['镇邪数',s.kills+' 只 · 最高 '+best+' 只'],[disciplines[chosen].thunder.name,s.thunder+' 次'],['召唤钟馗',s.summon+' 次'],['一眉道长',s.priest+' 次'],['镇伏无常',s.envoys+' 名']]),[['再入义庄',start],['返回山门',returnToMenu]]);
 }
 const ui={
   hud(s){$('life').style.width=s.hp+'%';$('life-text').textContent=s.hp+' / 100';
@@ -97,6 +113,7 @@ const ui={
   damage(v){$('hurt').style.opacity=Math.min(.85,v);},
   target(obj){const tag=$('target-tag');if(!obj){if(visibleTarget)tag.hidden=true;visibleTarget=false;return;}visibleTarget=true;tag.hidden=false;tag.style.left=obj.x+'%';tag.style.top=obj.y+'%';tag.querySelector('span').textContent=obj.label;tag.style.setProperty('--hp',(obj.hp*100)+'%');},
   banner(title,sub){const e=$('cast-banner');e.classList.toggle('show',!!title);e.querySelector('small').textContent=sub;e.querySelector('b').textContent=title;},
+  relic:showRelic,
   notice(msg){$('notice').textContent=msg;$('notice').classList.toggle('show',!!msg);},end
 };
 async function start(){
@@ -114,6 +131,7 @@ window.addEventListener('keydown',e=>{
   if(e.code==='KeyM'&&!e.repeat){toggleSound();return;}
   if(!modal.hidden){if(e.code==='Escape'){e.preventDefault();if(dialogKind==='pause'||(dialogKind==='help'&&game?.state==='paused'))continueGame();else if(dialogKind!=='result')hideDialog();}
     if(e.key==='Tab'){const things=[...modal.querySelectorAll('button')];if(e.shiftKey&&document.activeElement===things[0]){e.preventDefault();things.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===things.at(-1)){e.preventDefault();things[0].focus();}}return;}
+  if(relicPick){const n=['Digit1','Digit2','Digit3'].indexOf(e.code);if(n>=0){e.preventDefault();relicPick(n);}return;}
   if(game?.state!=='play')return;
   if(e.code==='Escape'){e.preventDefault();pauseMenu();return;}
   if(moveKeys.has(e.code)){e.preventDefault();game.keys.add(e.code);}
