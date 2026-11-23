@@ -2,6 +2,8 @@
 
 在槐阴镇义庄选择一个天师职业，迎战跳僵与黑白无常，守过九十秒。结算后可以再入义庄，或回山门换职业。
 
+**在线试玩：<https://zhgarylu.github.io/moshou-game/>**（推送到 main 后由 GitHub Pages 自动发布 `dist/`）
+
 ## 本机启动
 
 进入本目录后运行 `python3 -m http.server 4186 --bind 127.0.0.1 --directory dist`，再打开[试玩入口](http://127.0.0.1:4186/)。浏览器需支持 WebGL 2。Three.js、封面与游戏素材随项目提供。
