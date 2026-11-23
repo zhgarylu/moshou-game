@@ -647,7 +647,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     if(timeLeft<=0)finish(true);
   }
   function frame(now){
-    if(state!=='play')return;const dt=clamp((now-prev)/1000,0,.35);prev=now;
+    if(state!=='play')return;let dt=clamp((now-prev)/1000,0,.35);prev=now;
     perfTime+=dt;perfCount++;
     if(perfTime>=1.5){
       const fps=perfCount/perfTime,previous=pixelScale;
