@@ -234,17 +234,17 @@ function arcSheet(radius, sweep) {
 function gateCurtain() {
   return new THREE.ShaderMaterial({
     transparent:true, side:THREE.DoubleSide, depthWrite:false,
-    uniforms:{time:{value:0}, alpha:{value:1}},
+    uniforms:{time:{value:0}, alpha:{value:1}, deep:{value:new THREE.Color(.54,.025,.025)}, hot:{value:new THREE.Color(1,.21,.045)}},
     vertexShader:`varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
     fragmentShader:`
-      varying vec2 vUv; uniform float time; uniform float alpha;
+      varying vec2 vUv; uniform float time; uniform float alpha; uniform vec3 deep,hot;
       void main(){
         vec2 p=(vUv-.5)*2.; float r=length(p*vec2(.84,1.02));
         float a=atan(p.y,p.x); float w=sin(23.*r-4.*a-time*5.+1.8*sin(a*3.+time));
         float wave=pow(.5+.5*w,5.)*.42;
         float edge=pow(clamp(max(abs(p.x),abs(p.y)),0.,1.),5.);
-        vec3 col=mix(vec3(.020,.008,.055),vec3(.54,.025,.025),r*.58);
-        col+=vec3(1.,.21,.045)*(wave+edge*.72);gl_FragColor=vec4(col,alpha*(.80+.19*edge));
+        vec3 col=mix(vec3(.020,.008,.055),deep,r*.58);
+        col+=hot*(wave+edge*.72);gl_FragColor=vec4(col,alpha*(.80+.19*edge));
         #include <colorspace_fragment>
       }`
   });
@@ -751,7 +751,73 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
   });
   const devourMap=sealMap('啖','#ff4a2a');
   function beam(from,to,color=0xff3b24){flash(from.clone(),to.clone().setY(1.3),color,1.25);sparks(to.clone().setY(1.2),18,color,3,.45,6);}
+  // 每招一套「门色 + 地阵字」，从朱门升起的第一帧就能分辨出招。
+  const judgeLooks={
+    slash:{glyph:'斬',ink:'#ffe8ae',tint:0xffbd83,deep:[.54,.025,.025],hot:[1,.21,.045]},
+    devour:{glyph:'啖',ink:'#ff6a50',tint:0xff3020,deep:[.22,0,.015],hot:[.95,.04,.06]},
+    brush:{glyph:'勾',ink:'#ff8a9a',tint:0xff4a62,deep:[.32,.02,.07],hot:[1,.3,.42]},
+    ghosts:{glyph:'鬼',ink:'#9dffd8',tint:0x6dffc0,deep:[.02,.18,.14],hot:[.25,1,.68]},
+  };
+  for(const look of Object.values(judgeLooks))look.map=sealMap(look.glyph,look.ink);
+  // 啖鬼：一张血红鬼口在猎物身前张开，獠牙合拢时一口咬下。
+  function maw(getPos,life=1.1){
+    track(life+.5,fx=>{
+      const head=new THREE.Group();fx.group.add(head);
+      const gum=basic(fx,0x7a0a0a,false),fang=basic(fx,0xfff2dc,false),glowRed=glow(fx,head,v3(0,0,-.3),0xff2a10);
+      const jaws=[1,-1].map(side=>{
+        const jaw=new THREE.Group();head.add(jaw);
+        const arc=new THREE.Mesh(fx.own(new THREE.TorusGeometry(2.1,.34,8,28,PI)),gum);arc.rotation.z=side>0?0:PI;jaw.add(arc);
+        for(let i=1;i<8;i++){const a=PI*i/8,tooth=new THREE.Mesh(fx.own(new THREE.ConeGeometry(.17,.75,6)),fang);
+          tooth.position.set(Math.cos(a)*2.1,side*Math.sin(a)*2.1-side*.38,0);tooth.rotation.z=side>0?PI:0;jaw.add(tooth);}
+        return {jaw,side};
+      });
+      fx.step=t=>{
+        const p=getPos(),u=t/life,open=smooth(0,.3,u),bite=smooth(.62,.78,u),gone=smooth(1,1.35,u);
+        head.position.copy(p);head.position.y+=.4;
+        if(camera)head.quaternion.copy(camera.quaternion);
+        head.scale.setScalar((.4+.75*open)*(1+.5*gone));
+        for(const {jaw,side} of jaws)jaw.position.y=side*(1.8*(1-bite)+.05);
+        gum.opacity=fang.opacity=1-gone;glowRed.scale.setScalar(6*open);glowRed.material.opacity=.7*open*(1-gone);
+        if(u>=.78&&!fx.bit){fx.bit=true;blast(p.clone().setY(0),0xff2a10,3.6,.5);sparks(p.clone(),60,0x8a0606,6,.8,6);feedback('devour',.8);}
+      };
+      for(const m of [gum,fang])m.transparent=true;
+    });
+  }
+  // 朱笔勾名：每个被勾名的阴差头顶压下一枚朱红「勾」字，脚下溅开朱墨。
+  const checkMap=paint(256,256,(g,w,h)=>{
+    g.translate(w/2,h/2);g.fillStyle='rgba(200,20,24,.92)';
+    for(let i=0;i<14;i++){const a=between(0,TAU),r=between(70,118);g.beginPath();g.arc(Math.cos(a)*r,Math.sin(a)*r,between(4,14),0,TAU);g.fill();}
+    brush(g,'勾',0,6,170,'#e01818');
+  });
+  function strike(pos){
+    track(2.4,fx=>{
+      const seal=new THREE.Sprite(fx.own(new THREE.SpriteMaterial({map:checkMap,transparent:true,depthWrite:false,depthTest:false,toneMapped:false})));
+      seal.renderOrder=9;fx.group.add(seal);
+      const splash=surface(fx,fx.group,v3(pos.x,.07,pos.z),3.6,checkMap,0xffffff,false);
+      fx.step=t=>{
+        const hit=smooth(0,.14,t),fade=1-smooth(1.7,2.4,t);
+        seal.position.set(pos.x,3.6+2.2*(1-hit),pos.z);seal.scale.setScalar(2.6*(1.6-.6*hit));seal.material.opacity=hit*fade;
+        splash.material.opacity=.9*smooth(.1,.2,t)*fade;
+      };
+    });
+    flash(pos.clone().setY(9),pos.clone().setY(.2),0xff2030,1.4,true);sparks(pos.clone().setY(1),40,0xff2a30,5,.7,7);
+  }
+  // 五鬼听令：朱门前五方各冲起一道彩色光柱，小鬼从柱里蹦出。
+  const fiveColors=[0x3fe0a0,0xff5030,0xf4f0e4,0x7a66ff,0xffc040];
+  function pillars(origin){
+    track(1.6,fx=>{
+      const cols=fiveColors.map((c,i)=>{
+        const a=i/5*TAU,x=origin.x+Math.cos(a)*1.6,z=origin.z+1.6+Math.sin(a)*1;
+        const col=mesh(fx.group,fx.own(new THREE.CylinderGeometry(.55,.75,10,20,1,true)),basic(fx,c),x,5,z);
+        const foot=surface(fx,fx.group,v3(x,.08,z),2.6,seals.summon,c);
+        return {col,foot,delay:i*.08};
+      });
+      fx.step=t=>{for(const {col,foot,delay} of cols){const k=smooth(delay,delay+.15,t)*(1-smooth(.7+delay,1.6,t));
+        col.material.opacity=.75*k;col.scale.set(1+.4*(1-k),1,1+.4*(1-k));foot.material.opacity=k;}};
+    });
+  }
   function summon(target,onSlash=()=>{},variant='slash') {
+    const look=judgeLooks[variant]||judgeLooks.slash;
     const aim=clampFloor(target);
     const origin=v3(clamp(aim.x,-12.9,12.9),0,Math.max(-16.3,aim.z-4.9));
     const yaw=Math.atan2(aim.x-origin.x,aim.z-origin.z);
@@ -759,10 +825,10 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
     feedback('gong',.56);
     track(4.75,fx=>{
       const {group}=fx;
-      const field=surface(fx,group,v3(aim.x,.073,aim.z),9.15,seals.summon,0xffbd83);
+      const field=surface(fx,group,v3(aim.x,.073,aim.z),9.15,look.map,look.tint);
       const stage=new THREE.Group();stage.position.copy(origin);stage.rotation.y=yaw;group.add(stage);
       const gateGroup=new THREE.Group();stage.add(gateGroup);
-      const gate=buildGate(fx,gateGroup);
+      const gate=buildGate(fx,gateGroup);gate.curtain.uniforms.deep.value.setRGB(...look.deep);gate.curtain.uniforms.hot.value.setRGB(...look.hot);
       const wind=spirallingPaper(fx,stage,distance);
       const actor=actorPool.pop()||(actors.judge||makeZhongkui)();
       actor.resetMotion?.();
@@ -772,15 +838,19 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
 
       const decree=[0,1,2].map((_,i)=>glyph(fx,group,5,1.20));
       const backdropSeal=mesh(stage,ground,basic(fx,0xffa849,true,seals.summon),0,3.55,.16,5.78,5.78,1);
-      let ledger=null,stroke=null,vortex=null;
+      let ledger=null,stroke=null,vortex=null,brushPen=null;
       if(variant==='brush'){
         // 生死簿悬在朱门一侧、与钟馗头部齐高，正对镜头展开。
-        const book=new THREE.Group();book.position.set(-5.4,5.2,1.4);book.rotation.y=.42;stage.add(book);
+        const book=new THREE.Group();book.position.set(-5.6,5.2,1.6);book.rotation.y=.42;book.scale.setScalar(1.35);stage.add(book);
+        // 一支比人还高的朱笔，随勾名那一下横扫过整页。
+        brushPen=new THREE.Group();book.add(brushPen);
+        mesh(brushPen,fx.own(new THREE.CylinderGeometry(.07,.09,2.4,10)),basic(fx,0x3a1a10,false),0,1.4,0);
+        mesh(brushPen,fx.own(new THREE.ConeGeometry(.16,.55,12)),basic(fx,0xc8101a,false),0,-.05,0).rotation.x=PI;
         ledger=mesh(book,ground,basic(fx,0xffffff,false,ledgerMap),0,0,0,4.4,1.72,1);ledger.renderOrder=3;
         stroke=mesh(book,ground,basic(fx,0xff2a1a,false,brushStroke),0,.1,.05,4.2,.46,1);stroke.rotation.z=.12;stroke.renderOrder=4;
       }
       if(variant==='devour'){vortex=surface(fx,group,v3(aim.x,.09,aim.z),6.2,devourMap,0xff5a3a);}
-      const floorSeal=surface(fx,stage,v3(0,.065,0),8.35,seals.summon,0xff9760);
+      const floorSeal=surface(fx,stage,v3(0,.065,0),8.35,look.map,look.tint);
       let opened=false,stepped=false,slashed=false,returned=false;
       const gait={dt:0,forward:0,side:0,turn:0};
       fx.step=(t,dt)=>{
@@ -836,15 +906,17 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
           slashed=true;
           const extra={origin:origin.clone(),scroll:ledger?ledger.getWorldPosition(v3()):null};
           if(variant==='slash'){slashTrail(aim,yaw);feedback('slash',1);}
-          else if(variant==='devour'){blast(aim,0xff3a22,4.2,.6);sparks(aim.clone().setY(1.4),70,0x9b1410,5.5,1,3);feedback('devour',1);}
+          else if(variant==='devour'){blast(aim,0xff3a22,5.2,.7);scorch(aim,3.4);feedback('devour',1);}
           else if(variant==='brush'){feedback('slash',.7);}
-          else {blast(origin,0xffb35c,3.4,.5);sparks(origin.clone().setY(1.2),60,0xffd27a,5,.9,5);feedback('gong',.8);}
+          else {pillars(origin);blast(origin,0x6dffc0,4.6,.6);sparks(origin.clone().setY(1.2),90,0x9dffd8,6,1,4);feedback('gong',.9);}
           onSlash(aim.clone(),extra);
         }
         if(ledger){
           const open=smooth(1.6,2.25,t),gone=1-smooth(3.6,4.3,t);
           ledger.scale.x=4.4*Math.max(.02,open);ledger.material.opacity=open>0?gone:0;
           const ink=smooth(GATE_SLASH-.26,GATE_SLASH,t);stroke.scale.x=4.2*Math.max(.001,ink);stroke.position.x=-2.1+2.1*ink;stroke.material.opacity=ink*gone;
+          brushPen.visible=open>.5&&gone>.05;brushPen.position.set(-2.1+4.2*ink,.35+.4*Math.sin(ink*PI),.25);brushPen.rotation.z=-.5+.9*ink;
+          for(const m of [brushPen.children[0].material,brushPen.children[1].material])m.opacity=gone;
         }
         if(vortex){const k=smooth(1.2,2.4,t)*(1-smooth(3.5,4.4,t));vortex.material.opacity=.8*k;vortex.rotation.z=-t*2.2;vortex.scale.setScalar(6.2*(1-.4*smooth(GATE_SLASH,GATE_SLASH+.5,t)));}
         if(!returned&&t>=3.92&&!fx.dead){returned=true;feedback('chime',.36);}
@@ -899,6 +971,6 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
       }
     } finally {preparing=false;}
   }
-  const rites=makeRites(kit,actors.priest);
-  return {thunder,summon,castTrails:ritual.castTrails,priest:ritual.invoke,rites,beam,bolt,mark,rice,dodge,hit,update,clear,forClass,prime};
+  const rites=makeRites(kit,actors.priest,camera);
+  return {thunder,summon,maw,strike,castTrails:ritual.castTrails,priest:ritual.invoke,rites,beam,bolt,mark,rice,dodge,hit,update,clear,forClass,prime};
 }

@@ -5,9 +5,9 @@ import * as T from './vendor/three.module.js';
 const tau=Math.PI*2,V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 const ease=(a,b,t)=>T.MathUtils.smoothstep(t,a,b);
 
-export function makeRites(kit,makePriest){
+export function makeRites(kit,makePriest,camera=null){
   const {track,basic,mesh,surface,glow,blast,sparks,feedback,sealMap,ground,paint,flash,glyph}=kit;
-  const pool=[];let baguaMap=null,beamMap=null,auraSeal=null,inkMap=null;
+  const pool=[];let baguaMap=null,beamMap=null,auraSeal=null,inkMap=null,inkSeal=null,mirrorSeal=null;
   function textures(){
     if(baguaMap)return;
     baguaMap=paint(512,512,(g,w,h)=>{
@@ -23,8 +23,13 @@ export function makeRites(kit,makePriest){
       g.fillStyle='#fff';g.beginPath();g.arc(0,29,9,0,tau);g.fill();g.fillStyle='#1b1410';g.beginPath();g.arc(0,-29,9,0,tau);g.fill();
     });
     beamMap=paint(64,256,(g,w,h)=>{const r=g.createLinearGradient(0,0,0,h);r.addColorStop(0,'rgba(255,240,190,0)');r.addColorStop(.15,'rgba(255,226,150,.9)');r.addColorStop(1,'rgba(255,200,90,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
-    auraSeal=sealMap('神','#ffd77a');
+    auraSeal=sealMap('神','#ffd77a');inkSeal=sealMap('墨','#f2d08a');mirrorSeal=sealMap('照','#fff0b0');
     inkMap=paint(256,32,(g,w,h)=>{g.fillStyle='#120c08';g.fillRect(0,10,w,12);g.fillStyle='rgba(18,12,8,.6)';for(let x=0;x<w;x+=7)g.fillRect(x,8+Math.random()*4,4,16-Math.random()*6);});
+  }
+  // 道长落脚处先铺一面本招的地阵：墨（墨斗）、照（八卦）、神（神打）。
+  function sigil(fx,at,map,tint,size,life){
+    const s=surface(fx,fx.group,at.clone().setY(.075),size,map,tint);
+    return t=>{const k=ease(0,.35,t)*(1-ease(life-.5,life,t));s.material.opacity=.85*k;s.rotation.z=t*.6;s.scale.setScalar(size*(.75+.25*k));};
   }
   // 请道长现身：from 处冒出、走一小段、起手施法、life 末缩回地面。
   function cameo(fx,at,yaw,life,{walk=.9,ritualFrom=.9,ritualTo=2}={}){
@@ -54,31 +59,36 @@ export function makeRites(kit,makePriest){
     });
     feedback('ritualBell',.6);
     track(life,fx=>{
-      const priest=cameo(fx,at,yaw,3.3,{walk:.8,ritualFrom:.8,ritualTo:1.6});
+      const priest=cameo(fx,at,yaw,3.3,{walk:.8,ritualFrom:.8,ritualTo:1.6}),floor=sigil(fx,at,inkSeal,0xffd27a,5.5,3.4);
       const parts=lines.map(({start,end})=>{
         const len=start.distanceTo(end),mid=start.clone().lerp(end,.5),q=new T.Quaternion().setFromUnitVectors(V(1,0,0),end.clone().sub(start).normalize());
-        const core=mesh(fx.group,ground,basic(fx,0xffffff,false,inkMap),mid.x,mid.y,mid.z,len,.11,1);core.quaternion.copy(q).multiply(new T.Quaternion().setFromAxisAngle(V(1,0,0),-Math.PI/2));
-        const halo=mesh(fx.group,ground,basic(fx,0xffc25a),mid.x,mid.y+.01,mid.z,len,.34,1);halo.quaternion.copy(core.quaternion);
+        // 墨线做成一条竖立的粗墨带（侧看也有厚度），外裹金光，线上挂三张镇尸符。
+        const core=mesh(fx.group,ground,basic(fx,0xffffff,false,inkMap),mid.x,mid.y,mid.z,len,.26,1);core.quaternion.copy(q);
+        const flat=mesh(fx.group,ground,basic(fx,0xffffff,false,inkMap),mid.x,mid.y,mid.z,len,.26,1);flat.quaternion.copy(q).multiply(new T.Quaternion().setFromAxisAngle(V(1,0,0),-Math.PI/2));
+        const halo=mesh(fx.group,ground,basic(fx,0xffc25a),mid.x,mid.y,mid.z,len,.9,1);halo.quaternion.copy(q);
         const pins=[start,end].map(p=>glow(fx,fx.group,p.clone(),0xffd27a));
-        return {core,halo,pins,len,start,end};
+        const charms=[.25,.5,.75].map(u=>({u,paper:glyph(fx,fx.group,6,1.05,.46)}));
+        return {core,flat,halo,pins,charms,len,start,end};
       });
       let snapped=false;
       fx.step=(t,dt)=>{
-        priest(t,dt);
+        priest(t,dt);floor(t);
         const reach=ease(snap-.35,snap,t),fade=1-ease(life-.8,life,t);
         for(const p of parts){
           const k=Math.max(.001,reach);
-          p.core.scale.x=p.halo.scale.x=p.len*k;
-          const mid=p.start.clone().lerp(p.end,k*.5);p.core.position.set(mid.x,mid.y,mid.z);p.halo.position.set(mid.x,mid.y+.01,mid.z);
+          p.core.scale.x=p.flat.scale.x=p.halo.scale.x=p.len*k;
+          const mid=p.start.clone().lerp(p.end,k*.5);for(const m of [p.core,p.flat,p.halo])m.position.set(mid.x,mid.y,mid.z);
           // 崩直的一瞬间墨线弹起一下，金光最亮。
           const twang=t>snap?Math.exp(-(t-snap)*9)*Math.sin((t-snap)*60):0;
-          p.core.position.y+=twang*.12;p.halo.position.y=p.core.position.y+.01;
-          p.core.material.opacity=reach*fade;p.halo.material.opacity=(t<snap?.2:.25+.6*Math.exp(-(t-snap)*4))*reach*fade*(.85+.15*Math.sin(t*9));
-          p.pins.forEach(pin=>{pin.scale.setScalar(.9);pin.material.opacity=reach*fade*.8;});
+          for(const m of [p.core,p.flat,p.halo])m.position.y+=twang*.25;
+          p.core.material.opacity=p.flat.material.opacity=reach*fade;p.halo.material.opacity=(t<snap?.25:.35+.6*Math.exp(-(t-snap)*4))*reach*fade*(.8+.2*Math.sin(t*9));
+          p.pins.forEach(pin=>{pin.scale.setScalar(1.6);pin.material.opacity=reach*fade;});
+          p.charms.forEach(({u,paper},i)=>{const at=p.start.clone().lerp(p.end,u*k);paper.position.set(at.x,at.y-.45+twang*.25,at.z);
+            paper.material.rotation=.35*Math.sin(t*4+i+u*9);paper.material.opacity=ease(snap,snap+.2,t)*fade;});
         }
         if(!snapped&&t>=snap&&!fx.dead){
           snapped=true;feedback('inkSnap',1);
-          for(const p of parts){for(let i=1;i<=4;i++)sparks(p.start.clone().lerp(p.end,i/5),10,0x2a1a10,2.4,.5,6);}
+          for(const p of parts){for(let i=1;i<=4;i++){const q=p.start.clone().lerp(p.end,i/5);sparks(q,22,0x140c06,4,.7,6);blast(q.clone().setY(0),0xffd27a,1.6,.35);}}
           onSnap(parts.map(p=>({a:p.start.clone().setY(0),b:p.end.clone().setY(0)})),life-snap);
         }
       };
@@ -91,14 +101,17 @@ export function makeRites(kit,makePriest){
     const yaw=Math.atan2(dir.x,dir.z),side=V(dir.z,0,-dir.x),at=player.clone().addScaledVector(side,1.4).addScaledVector(dir,-.3);
     feedback('ritualBell',.6);
     track(life,fx=>{
-      const priest=cameo(fx,at,yaw,life,{walk:.8,ritualFrom:.8,ritualTo:1.5});
+      const priest=cameo(fx,at,yaw,life,{walk:.8,ritualFrom:.8,ritualTo:1.5}),floor=sigil(fx,at,mirrorSeal,0xfff0b0,5,life);
+      // 照出去的那一刻，目标处地面投出一面巨大的八卦。
+      const spot=aim.clone().setY(.08),projection=surface(fx,fx.group,spot,9,baguaMap,0xffe6a0);
       const disc=mesh(fx.group,ground,basic(fx,0xffffff,false,baguaMap),0,0,0,1.5,1.5,1);
       const shineGlow=glow(fx,fx.group,V(),0xfff0b0);
-      const cone=new T.Mesh(fx.own(new T.ConeGeometry(Math.tan(spread)*range,range,40,1,true)),basic(fx,0xffd27a,true,beamMap));
+      const cone=new T.Mesh(fx.own(new T.ConeGeometry(Math.tan(spread)*range,range,40,1,true)),basic(fx,0xffe08a,true,beamMap));
       cone.material.side=T.DoubleSide;fx.group.add(cone);
       let fired=false;const mouth=V();
       fx.step=(t,dt)=>{
-        const actor=priest(t,dt),raise=ease(.7,1.25,t),fade=1-ease(life-.7,life,t);
+        const actor=priest(t,dt),raise=ease(.7,1.25,t),fade=1-ease(life-.7,life,t);floor(t);
+        const cast=ease(shine,shine+.25,t);projection.material.opacity=.85*cast*fade;projection.rotation.z=-t*1.2;projection.scale.setScalar(9*(.6+.4*cast));
         mouth.copy(actor.position).addScaledVector(dir,.6);mouth.y=1.7+1.1*raise;
         disc.position.copy(mouth);disc.rotation.set(0,yaw+Math.PI,0);disc.rotateZ(t*2.4);disc.material.opacity=ease(.3,.8,t)*fade;
         disc.scale.setScalar(1.1+.5*raise);
@@ -106,7 +119,7 @@ export function makeRites(kit,makePriest){
         // 光锥从镜面朝外，顶点在镜心。
         const aimDown=dir.clone().setY(-(mouth.y-.9)/range).normalize();
         cone.position.copy(mouth).addScaledVector(aimDown,range/2);cone.quaternion.setFromUnitVectors(V(0,-1,0),aimDown);
-        const beamOn=t>shine?Math.exp(-(t-shine)*1.6):0;cone.material.opacity=.55*beamOn*fade;cone.visible=t>shine;
+        const beamOn=t>shine?Math.exp(-(t-shine)*1.2):0;cone.material.opacity=.85*beamOn*fade;cone.visible=t>shine;
         if(!fired&&t>=shine&&!fx.dead){fired=true;feedback('mirror',1);blast(mouth.clone().setY(.1),0xffe3a0,2.4,.4);onFlash(mouth.clone().setY(0),dir.clone(),range,spread);}
       };
     });
@@ -127,19 +140,39 @@ export function makeRites(kit,makePriest){
     });
   }
   // 神打附身期间，脚下金印与三张护身符绕身旋转。
-  function aura(getPlayer,life){
+  function aura(getPlayer,life,getYaw=()=>0){
     textures();
     track(life,fx=>{
-      const ring=surface(fx,fx.group,V(0,.07,0),3,auraSeal,0xffd27a);
+      const ring=surface(fx,fx.group,V(0,.07,0),4.2,auraSeal,0xffd27a);
+      // 金身法相：道长的巨大金色虚影立在玩家身后，跟着施法。
+      const ghost=makePriest(),gold=new T.MeshBasicMaterial({color:0xffc860,transparent:true,opacity:.32,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false});
+      ghost.root.traverse(o=>{if(o.isMesh){o.material=gold;o.castShadow=false;}});fx.group.add(ghost.root);
+      fx.onEnd=()=>ghost.root.removeFromParent();
+      const flame=mesh(fx.group,fx.own(new T.CylinderGeometry(1.1,1.4,1.2,24,1,true)),basic(fx,0xffc860),0,.6,0);
       const papers=[0,1,2].map(()=>glyph(fx,fx.group,6,.7,.3));
       fx.step=t=>{
         const p=getPlayer(),fade=1-ease(life-.6,life,t),pulse=.8+.2*Math.sin(t*6);
-        fx.group.position.set(p.x,0,p.z);ring.rotation.z=t*1.5;ring.material.opacity=.7*fade*pulse;
+        fx.group.position.set(p.x,0,p.z);ring.rotation.z=t*1.5;ring.material.opacity=.8*fade*pulse;
+        const yaw=getYaw(),grow=ease(0,.5,t);
+        // 法相站在玩家左前方，面朝同一方向，不挡在镜头与玩家之间。
+        const fx_=-Math.sin(yaw),fz=-Math.cos(yaw);
+        ghost.root.position.set(fx_*1.2+fz*2.6,-.2,fz*1.2-fx_*2.6);ghost.root.rotation.y=yaw+Math.PI;ghost.root.scale.setScalar(2.4*grow);
+        ghost.animate('ritual',t,.5+.5*Math.sin(t*2),{dt:1/60,forward:0,side:0,turn:0});gold.opacity=.24*fade*(.85+.15*Math.sin(t*5));
+        flame.material.opacity=.16*fade*pulse;flame.rotation.y=t*2;
         papers.forEach((s,i)=>{const a=t*2.4+tau*i/3;s.position.set(Math.cos(a)*1.1,1.2+.25*Math.sin(t*3+i),Math.sin(a)*1.1);s.material.opacity=fade;});
       };
     });
   }
+  // 被照出原形的敌人头顶浮着一面小八卦，持续到易伤结束。
+  function exposedMark(getPos,life){
+    textures();
+    track(life,fx=>{
+      const m=new T.Sprite(fx.own(new T.SpriteMaterial({map:baguaMap,color:0xffe6a0,transparent:true,depthWrite:false,toneMapped:false})));fx.group.add(m);
+      fx.step=t=>{const p=getPos();if(!p){m.visible=false;return;}m.position.set(p.x,3.3+.12*Math.sin(t*4),p.z);m.material.rotation=t*2;
+        const k=ease(0,.2,t)*(1-ease(life-.4,life,t));m.scale.setScalar(1.1*k);m.material.opacity=k;};
+    });
+  }
   // 神打期间普攻附带的掌心雷。
-  function palm(from,to){flash(from.clone().setY(1.4),to.clone().setY(1),0xffd77a,1.2);blast(to.clone(),0xffd77a,2,.3);}
-  return {ink,mirror,possess,aura,palm};
+  function palm(from,to){flash(from.clone().setY(1.4),to.clone().setY(1),0xffd77a,1.6);flash(to.clone().setY(8),to.clone().setY(.1),0xffe6a0,.9,true);blast(to.clone(),0xffd77a,2.6,.35);sparks(to.clone().setY(1),24,0xffe6a0,4,.5,6);}
+  return {ink,mirror,possess,aura,palm,exposedMark};
 }

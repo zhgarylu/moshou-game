@@ -318,14 +318,14 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
           for(const e of enemies){
             if(e.hp<=0)continue;tmp.copy(e.actor.root.position).sub(origin).setY(0);const d=tmp.length();
             if(d>range||tmp.normalize().dot(dir)<Math.cos(spread+.1))continue;
-            caught++;e.exposed=6;
+            caught++;if(e.exposed<=0){const r=e.actor.root;fx.rites.exposedMark(()=>e.hp>0?r.position:null,6);}e.exposed=6;
             if(e.type>=BLACK){if(e===tetherEnemy)breakTether();dismiss(e);e.stage='chase';e.wait=Math.max(e.wait,3);damageEnemy(e,60,2.2);}
             else damageEnemy(e,40,1);
             fx.hit(e.actor.root.position,0xffe3a0);
           }
           notice(caught?'照妖镜下 · 现出原形':'金光照空',1.6);
         });}
-        else{focusLife=focusSpan=2.2;fx.rites.possess(()=>pos,yaw,()=>{possessed=8;fx.rites.aura(()=>pos,8);hp=Math.min(100,hp+10);notice('茅山神打 · 掌心引雷',2);syncHud();});}
+        else{focusLife=focusSpan=2.2;fx.rites.possess(()=>pos,yaw,()=>{possessed=8;fx.rites.aura(()=>pos,8,()=>yaw);hp=Math.min(100,hp+10);notice('茅山神打 · 掌心引雷',2);syncHud();});}
       }else if(invoking){
         summonCount++;seals=0;sealCharge=0;cool.summon=7;
         const m=judgeMoves.find(x=>x.key===move);banner(m.name,'三印请神 · 钟馗',3.25);
@@ -338,13 +338,13 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
           audio.voice('judge.'+move,{channel:'judge'});
           if(move==='slash')area(p,7.3,235,2.15);
           else if(move==='devour'){
-            if(prey&&prey.hp>0){prey.devourFrom=null;prey.devour=1.1;prey.stagger=0;dismiss(prey);if(prey===tetherEnemy)breakTether();}
+            if(prey&&prey.hp>0){const r=prey.actor.root;fx.maw(()=>r.position.clone().setY(r.position.y+1.2),1.1);prey.devourFrom=null;prey.devour=1.1;prey.stagger=0;dismiss(prey);if(prey===tetherEnemy)breakTether();}
             area(p,3.2,40,1,0xff5a3a);hp=Math.min(100,hp+20);notice('钟馗啖鬼 · 回元 20',1.8);syncHud();
           }else if(move==='brush'){
             let struck=0;
             for(const e of enemies)if(e.hp>0&&e.type>=BLACK){
               struck++;if(e===tetherEnemy)breakTether();dismiss(e);e.stage='chase';e.wait=Math.max(e.wait,6);
-              damageEnemy(e,Math.ceil(e.max*.35/mods.dmg),1.4);if(extra.scroll)fx.beam(extra.scroll,e.actor.root.position);
+              damageEnemy(e,Math.ceil(e.max*.35/mods.dmg),1.4);fx.strike(e.actor.root.position.clone());
             }
             area(p,5,30,.6,0xff3b24);notice(struck?'生死簿上 · 勾去其名':'簿上暂无阴差之名',1.8);
           }else spawnImps(extra.origin);
@@ -474,7 +474,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   }
   function spawnImps(origin){
     for(let i=0;i<5;i++){
-      const actor=makeImpActor(i),a=i/5*Math.PI*2;actor.root.scale.setScalar(1.35);
+      const actor=makeImpActor(i),a=i/5*Math.PI*2;actor.root.scale.setScalar(1.7);
       actor.root.position.set(clamp(origin.x+Math.cos(a)*1.4,-14,14),0,clamp(origin.z+1.5+Math.sin(a)*.8,-12,12));scene.add(actor.root);
       imps.push({actor,life:10,cd:.3+i*.1,swing:0,seed:i*1.3});
     }

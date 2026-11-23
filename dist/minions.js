@@ -121,7 +121,7 @@ export function makeFlyerActor(){
 }
 
 // 五鬼：钟馗座下五方小鬼，戴青、赤、白、玄、黄五色傩面，矮身短角，蹦跳着追打敌人。
-const impColors=[0x3fbf8f,0xd8452c,0xe8e4d8,0x3a3550,0xe0b040];
+const impColors=[0x3fe0a0,0xff5030,0xf4f0e4,0x7a66ff,0xffc040];
 let impFaces=null;
 function impFace(i){
   impFaces??=impColors.map(c=>canvasTexture(128,128,(g,w,h)=>{
@@ -143,10 +143,15 @@ export function makeImpActor(i=0){
   for(const s of [-1,1]){const h=new THREE.Mesh(new THREE.ConeGeometry(.05,.22,6),hornMat);h.position.set(s*.13,1.22,0);h.rotation.z=-s*.4;body.add(h);}
   const arms=[-1,1].map(s=>{const a=new THREE.Mesh(new THREE.BoxGeometry(.09,.4,.09),robe);a.position.set(s*.3,.6,0);body.add(a);return a;});
   body.add(torso,face);root.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+  // 每只小鬼裹着本方颜色的鬼火，跑动时拖出火尾。
+  const fireMat=new THREE.SpriteMaterial({map:assets().flame,color:impColors[i%5],transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  const fires=[0,1,2].map(k=>{const f=new THREE.Sprite(fireMat);f.position.set(0,.55+k*.05,-.25-k*.32);f.scale.setScalar(1.3-k*.3);body.add(f);return f;});
+  const halo=new THREE.Sprite(fireMat);halo.scale.setScalar(2.2);halo.position.y=.7;body.add(halo);
   function animate(pose='walk',time=0,p=1){
     body.position.y=Math.abs(Math.sin(time*11))*.22;body.rotation.set(0,0,Math.sin(time*11)*.12);
     arms.forEach((a,k)=>{a.rotation.x=pose==='attack'?-2.2+2*p:Math.sin(time*11+k*Math.PI)*.8;});
     if(pose==='attack')body.rotation.x=.5*Math.sin(Math.PI*p);
+    fireMat.opacity=.75+.25*Math.sin(time*17);halo.scale.setScalar(pose==='attack'?3:2.2);
   }
   return {root,animate,resetMotion(){},dispose(){}};
 }
