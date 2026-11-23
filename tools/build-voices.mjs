@@ -28,13 +28,13 @@ function apiKey(){
   return m[1];
 }
 // instruct 走 seed-tts-2.0 的 context_texts，用一句话描述语气（如「威严大声喝令」）。
-async function synth(text,speaker,rate,key,instruct){
+async function synth(text,speaker,rate,key,instruct,resource=RESOURCE){
   const body={req_params:{text,speaker,audio_params:{format:'mp3',sample_rate:SR,speech_rate:Math.max(-50,Math.min(100,rate))}}};
   if(instruct)body.req_params.additions=JSON.stringify({context_texts:[instruct]});
   let last;
   for(let attempt=0;attempt<3;attempt++){
     try{
-      const r=await fetch(URL,{method:'POST',headers:{'X-Api-Key':key,'X-Api-Resource-Id':RESOURCE,'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const r=await fetch(URL,{method:'POST',headers:{'X-Api-Key':key,'X-Api-Resource-Id':resource,'Content-Type':'application/json'},body:JSON.stringify(body)});
       const logid=r.headers.get('x-tt-logid')||'';
       if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,200)+' logid='+logid);
       const chunks=[];
@@ -76,10 +76,12 @@ const chains={
 // 吼叫类台词整体更响，其余维持 -15 LUFS。
 const loud={deity:-11,roar:-11,hell1:-10,hell2:-10,hell3:-10};
 const work=mkdtempSync(join(tmpdir(),'daofa-voice-'));let key=null;
-async function render(line,speaker,target){
+// speaker 可写成字符串，或 {"id":..., "resource":"seed-tts-1.0"}（方言音色如广西远舟只在 1.0 资源下可用）。
+async function render(line,who,target){
   key??=apiKey();
-  const rate=line.rate||0,raw=join(cache,createHash('sha1').update(JSON.stringify([speaker,rate,line.text,RESOURCE,line.instruct||''])).digest('hex').slice(0,16)+'.mp3');
-  if(!existsSync(raw)){writeFileSync(raw+'.part',await synth(line.text,speaker,rate,key,line.instruct));renameSync(raw+'.part',raw);}
+  const speaker=typeof who==='string'?who:who.id,resource=(typeof who==='object'&&who.resource)||RESOURCE;
+  const rate=line.rate||0,raw=join(cache,createHash('sha1').update(JSON.stringify([speaker,rate,line.text,resource,line.instruct||''])).digest('hex').slice(0,16)+'.mp3');
+  if(!existsSync(raw)){writeFileSync(raw+'.part',await synth(line.text,speaker,rate,key,line.instruct,resource));renameSync(raw+'.part',raw);}
   const wav=join(work,'a.wav');
   execFileSync('ffmpeg',['-y','-loglevel','error','-i',raw,'-ar',String(SR),'-ac','1',wav]);
   execFileSync('ffmpeg',['-y','-loglevel','error','-i',wav,'-af',
@@ -95,7 +97,7 @@ try{
     const plan=JSON.parse(readFileSync(process.argv[auditionAt+1],'utf8')),dir=join(out,'audition'),list=[];
     mkdirSync(dir,{recursive:true});
     for(const [role,candidates] of Object.entries(plan))candidates.forEach((c,n)=>{
-      for(const [id,line] of Object.entries(lines))if(id.startsWith(role+'.'))list.push({role,n,c,id,line:{...line,...c.line,instruct:c.instruct??line.instruct,fx:c.fx??line.fx}});
+      for(const [id,line] of Object.entries(lines))if(id.startsWith(role+'.'))list.push({role,n,c,id,line:{...line,...c.line,...(c.lines?.[id]||{}),instruct:c.instruct??line.instruct,fx:c.fx??line.fx}});
     });
     const rows=[];
     for(const {role,n,c,id,line} of list){

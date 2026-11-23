@@ -22,7 +22,7 @@ WASD 移动，拖动画面转向，空格闪避，Esc 暂停。触屏可用左�
 
 ## 配音与资源压缩
 
-招式与大招配音位于 `dist/voice`，由火山引擎豆包语音 2.0 合成，台词、角色音色和语速都在 `tools/voices.json`。运行 `node tools/build-voices.mjs` 可全部重做，也可在命令后加 key 单独更新，需要 ffmpeg。密钥从环境变量 `VOLC_TTS_KEY` 或 `VOLC_KEY_FILE` 指向的文件读取，不进仓库；接口原始音频缓存在 `tools/.voice-cache`，只调后期不会重复计费。打开 `voice/preview.html` 可逐句试听。换成真人录音时，保持 `dist/voice/<key>.mp3` 同名并更新 `index.json` 里的时长即可。
+招式与大招配音位于 `dist/voice`，由火山引擎豆包语音 2.0 合成，台词、角色音色和语速都在 `tools/voices.json`。运行 `node tools/build-voices.mjs` 可全部重做，也可在命令后加 key 单独更新，需要 ffmpeg。密钥从环境变量 `VOLC_TTS_KEY` 或 `VOLC_KEY_FILE` 指向的文件读取，不进仓库；接口原始音频缓存在 `tools/.voice-cache`，只调后期不会重复计费。打开 `voice/preview.html` 可逐句试听。请钟馗与请一眉道长时由「广西远舟」方言音色喊召唤旁白，该音色只在豆包语音 1.0 下可用，台词表里以 `{"id":…, "resource":"seed-tts-1.0"}` 指定。换成真人录音时，保持 `dist/voice/<key>.mp3` 同名并更新 `index.json` 里的时长即可。
 
 实战 GLB 烘焙后运行 `node tools/compress-battle.mjs dist/art/battle/*.glb`，贴图会转成 WebP，法线、UV 和蒙皮权重会被量化，需要 PATH 中有 `cwebp`。已压缩的文件会被跳过。标题页打开后即在后台预载战斗模型。
 

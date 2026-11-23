@@ -14,11 +14,6 @@
   "dur": 1.158,
   "text": "急急如律令！"
  },
- "thunder.invoke": {
-  "file": "thunder-invoke.mp3",
-  "dur": 1.578,
-  "text": "恭请钟馗！"
- },
  "thunder.rice": {
   "file": "thunder-rice.mp3",
   "dur": 1.586,
@@ -49,11 +44,6 @@
   "dur": 0.524,
   "text": "斩！"
  },
- "sword.invoke": {
-  "file": "sword-invoke.mp3",
-  "dur": 1.185,
-  "text": "恭请钟馗！"
- },
  "sword.rice": {
   "file": "sword-rice.mp3",
   "dur": 1.438,
@@ -83,11 +73,6 @@
   "file": "ward-final.mp3",
   "dur": 0.653,
   "text": "镇！"
- },
- "ward.invoke": {
-  "file": "ward-invoke.mp3",
-  "dur": 1.688,
-  "text": "恭请钟馗！"
  },
  "ward.rice": {
   "file": "ward-rice.mp3",
@@ -128,5 +113,15 @@
   "file": "white-enter.mp3",
   "dur": 3.027,
   "text": "勾魂……索命……"
+ },
+ "summon.judge": {
+  "file": "summon-judge.mp3",
+  "dur": 1.186,
+  "text": "钟馗大佬快来！"
+ },
+ "summon.priest": {
+  "file": "summon-priest.mp3",
+  "dur": 1.279,
+  "text": "九叔！救命啊！"
  }
 }

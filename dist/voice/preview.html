@@ -23,7 +23,7 @@
 <div class="bar"><button id="all">全部顺序播放</button><button class="ghost" id="stop">停止</button></div>
 <div id="list"></div>
 <script>
-const groups=[['雷法天师','thunder.'],['剑诀天师','sword.'],['镇坛天师','ward.'],['钟馗','judge.'],['一眉道长','priest.'],['黑白无常',['black.','white.']]];
+const groups=[['雷法天师','thunder.'],['剑诀天师','sword.'],['镇坛天师','ward.'],['钟馗','judge.'],['一眉道长','priest.'],['召唤旁白','summon.'],['黑白无常',['black.','white.']]];
 const audio=new Audio();let queue=[],current=null;
 fetch('./index.json',{cache:'no-store'}).then(r=>r.json()).then(index=>{
   const list=document.getElementById('list');
@@ -43,7 +43,7 @@ fetch('./audition/index.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).then
   if(!rows.length)return;
   const list=document.getElementById('list'),head=document.createElement('h2');
   head.textContent='候选对比 · 点组名连播';head.style.cssText='color:#ffd99a;font-size:15px;margin-top:6px';list.prepend(head);
-  const roles={priest:'一眉道长',judge:'钟馗'};let anchor=head;
+  const roles={priest:'一眉道长',judge:'钟馗',summon:'召唤旁白（广西远舟）'};let anchor=head;
   for(const role of [...new Set(rows.map(r=>r.role))]){
     for(const option of [...new Set(rows.filter(r=>r.role===role).map(r=>r.option))]){
       const items=rows.filter(r=>r.role===role&&r.option===option);
