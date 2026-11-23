@@ -1,132 +1,132 @@
 {
  "thunder.chain": {
   "file": "thunder-chain.mp3",
-  "dur": 0.583,
+  "dur": 0.671,
   "text": "雷来！"
  },
  "thunder.ultimate": {
   "file": "thunder-ultimate.mp3",
-  "dur": 2.105,
+  "dur": 1.895,
   "text": "天地无极，五雷听令！"
  },
  "thunder.final": {
   "file": "thunder-final.mp3",
-  "dur": 0.975,
+  "dur": 1.158,
   "text": "急急如律令！"
  },
  "thunder.invoke": {
   "file": "thunder-invoke.mp3",
-  "dur": 1.247,
+  "dur": 1.578,
   "text": "恭请钟馗！"
  },
  "thunder.rice": {
   "file": "thunder-rice.mp3",
-  "dur": 1.292,
+  "dur": 1.586,
   "text": "糯米，镇尸！"
  },
  "thunder.win": {
   "file": "thunder-win.mp3",
-  "dur": 0.991,
+  "dur": 1.15,
   "text": "义庄已安。"
  },
  "thunder.hurt": {
   "file": "thunder-hurt.mp3",
-  "dur": 0.615,
+  "dur": 0.616,
   "text": "顶住！"
  },
  "sword.chain": {
   "file": "sword-chain.mp3",
-  "dur": 1.412,
+  "dur": 1.722,
   "text": "七星，列阵！"
  },
  "sword.ultimate": {
   "file": "sword-ultimate.mp3",
-  "dur": 1.604,
+  "dur": 1.553,
   "text": "万剑，归宗！"
  },
  "sword.final": {
   "file": "sword-final.mp3",
-  "dur": 0.523,
+  "dur": 0.524,
   "text": "斩！"
  },
  "sword.invoke": {
   "file": "sword-invoke.mp3",
-  "dur": 1.25,
+  "dur": 1.185,
   "text": "恭请钟馗！"
  },
  "sword.rice": {
   "file": "sword-rice.mp3",
-  "dur": 1.405,
+  "dur": 1.438,
   "text": "糯米，镇尸！"
  },
  "sword.win": {
   "file": "sword-win.mp3",
-  "dur": 1.089,
+  "dur": 1.154,
   "text": "义庄已安。"
  },
  "sword.hurt": {
   "file": "sword-hurt.mp3",
-  "dur": 0.647,
+  "dur": 0.76,
   "text": "顶住！"
  },
  "ward.chain": {
   "file": "ward-chain.mp3",
-  "dur": 1.373,
+  "dur": 1.831,
   "text": "四象，镇坛！"
  },
  "ward.ultimate": {
   "file": "ward-ultimate.mp3",
-  "dur": 1.385,
+  "dur": 1.618,
   "text": "狮印，撼岳！"
  },
  "ward.final": {
   "file": "ward-final.mp3",
-  "dur": 0.499,
+  "dur": 0.653,
   "text": "镇！"
  },
  "ward.invoke": {
   "file": "ward-invoke.mp3",
-  "dur": 1.282,
+  "dur": 1.688,
   "text": "恭请钟馗！"
  },
  "ward.rice": {
   "file": "ward-rice.mp3",
-  "dur": 1.332,
+  "dur": 1.569,
   "text": "糯米，镇尸！"
  },
  "ward.win": {
   "file": "ward-win.mp3",
-  "dur": 1.017,
+  "dur": 1.324,
   "text": "义庄已安。"
  },
  "ward.hurt": {
   "file": "ward-hurt.mp3",
-  "dur": 0.645,
+  "dur": 0.82,
   "text": "顶住！"
  },
  "judge.arrive": {
   "file": "judge-arrive.mp3",
-  "dur": 1.418,
+  "dur": 1.564,
   "text": "何方妖孽！"
  },
  "judge.slash": {
   "file": "judge-slash.mp3",
-  "dur": 0.859,
+  "dur": 1.016,
   "text": "斩！"
  },
  "priest.invoke": {
   "file": "priest-invoke.mp3",
-  "dur": 3.088,
+  "dur": 3.861,
   "text": "北斗七星，伏魔镇邪。敕！"
  },
  "black.enter": {
   "file": "black-enter.mp3",
-  "dur": 1.457,
+  "dur": 1.922,
   "text": "拿命来……"
  },
  "white.enter": {
   "file": "white-enter.mp3",
-  "dur": 2.292,
+  "dur": 3.027,
   "text": "勾魂……索命……"
  }
 }

@@ -273,7 +273,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
         fx.priest(at,(p,hit)=>area(p,hit.radius,hit.damage,hit.stun,hit===sevenStars.gather?0xa9dfff:0xffd784),yaw);
       }else if(invoking){
         summonCount++;seals=0;sealCharge=0;cool.summon=7;banner(spec.summon.name,'三印请神 · 镇宅圣君',3.25);
-        audio.voice(classId+'.invoke');audio.voice('judge.arrive',{channel:'judge',delay:1.15});
+        audio.voice(classId+'.invoke');audio.voice('judge.arrive',{channel:'judge',delay:.95});
         fx.summon(at,p=>{audio.voice('judge.slash',{channel:'judge'});area(p,7.3,235,2.15);});
       }else{
         thunderCount++;cool.thunder=15;banner(spec.thunder.name,spec.thunder.school,3.05);audio.voice(classId+'.ultimate');

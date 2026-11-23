@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>配音试听</title>
+<style>
+  body{margin:0;background:#101719;color:#efe6cf;font:15px/1.6 "PingFang SC",system-ui,sans-serif;padding:20px 16px}
+  h1{font:600 22px "Kaiti SC",KaiTi,serif;margin:0 0 4px;color:#ffd99a}
+  p{margin:0 0 16px;color:#b9b2a0;font-size:13px}
+  .bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  button{background:#9a3827;color:#ffe5aa;border:1px solid #c9784f;border-radius:6px;padding:6px 14px;font:inherit;cursor:pointer}
+  button.ghost{background:transparent}
+  h2{font-size:13px;color:#8fb8b0;letter-spacing:2px;margin:18px 0 6px;font-weight:500}
+  .row{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid #253033;cursor:pointer}
+  .row:hover{background:#18232a}.row.on{background:#2a2218}
+  .row b{font-weight:500}.row small{color:#7f8a86;font-family:ui-monospace,monospace}
+  .row span{color:#9aa39f;font-size:12px}
+</style>
+</head>
+<body>
+<h1>义庄惊雷 · 配音试听</h1>
+<p>点一行播放，或按「全部顺序播放」。台词与音色在 tools/voices.json。</p>
+<div class="bar"><button id="all">全部顺序播放</button><button class="ghost" id="stop">停止</button></div>
+<div id="list"></div>
+<script>
+const groups=[['雷法天师','thunder.'],['剑诀天师','sword.'],['镇坛天师','ward.'],['钟馗','judge.'],['一眉道长','priest.'],['黑白无常',['black.','white.']]];
+const audio=new Audio();let queue=[],current=null;
+fetch('./index.json',{cache:'no-store'}).then(r=>r.json()).then(index=>{
+  const list=document.getElementById('list');
+  for(const [title,prefix] of groups){
+    const h=document.createElement('h2');h.textContent=title;list.append(h);
+    for(const [key,v] of Object.entries(index)){
+      if(![].concat(prefix).some(p=>key.startsWith(p)))continue;
+      const row=document.createElement('div');row.className='row';row.dataset.file=v.file;
+      row.innerHTML='<span>'+v.dur.toFixed(1)+'s</span><b></b><small></small>';
+      row.querySelector('b').textContent=v.text;row.querySelector('small').textContent=key;
+      row.onclick=()=>{queue=[];play(row);};list.append(row);
+    }
+  }
+});
+function play(row){
+  current?.classList.remove('on');current=row;row.classList.add('on');
+  audio.src='./'+row.dataset.file;audio.play();
+}
+audio.onended=()=>{current?.classList.remove('on');const next=queue.shift();if(next)setTimeout(()=>play(next),350);};
+document.getElementById('all').onclick=()=>{queue=[...document.querySelectorAll('.row')];play(queue.shift());};
+document.getElementById('stop').onclick=()=>{queue=[];audio.pause();current?.classList.remove('on');};
+</script>
+</body></html>
