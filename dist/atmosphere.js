@@ -31,8 +31,8 @@ export function makeAtmosphere(renderer){
     vec3 sampleGlow(vec2 uv){vec3 c=texture2D(source,uv).rgb;float x=max(max(c.r,c.g),c.b);return c*mix(1.,smoothstep(.83,1.72,x),extract);}
     void main(){vec3 c=sampleGlow(uv0)*.227; c+=(sampleGlow(uv0+direction*1.385)+sampleGlow(uv0-direction*1.385))*.316;
       c+=(sampleGlow(uv0+direction*3.23)+sampleGlow(uv0-direction*3.23))*.07;gl_FragColor=vec4(c,1.);}`});
-  const final=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{sceneMap:{value:image.texture},lightMap:{value:vertical.texture},pixel:{value:new THREE.Vector2()},surge:{value:0}},vertexShader,
-    fragmentShader:`varying vec2 uv0;uniform sampler2D sceneMap,lightMap;uniform vec2 pixel;uniform float surge;
+  const final=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{sceneMap:{value:image.texture},lightMap:{value:vertical.texture},pixel:{value:new THREE.Vector2()},surge:{value:0},dim:{value:0}},vertexShader,
+    fragmentShader:`varying vec2 uv0;uniform sampler2D sceneMap,lightMap;uniform vec2 pixel;uniform float surge,dim;
     void main(){vec3 base=texture2D(sceneMap,uv0).rgb;vec3 glow=texture2D(lightMap,uv0).rgb;
     vec2 x=vec2(pixel.x,0.),y=vec2(0.,pixel.y);
     vec3 nearColor=.25*(texture2D(sceneMap,uv0+x).rgb+texture2D(sceneMap,uv0-x).rgb
@@ -42,7 +42,11 @@ export function makeAtmosphere(renderer){
     float detail=(brightness-dot(nearColor,luma))/max(brightness,.028);
     base*=1.+.32*clamp(detail,-.18,.24);
     vec2 off=(uv0-.5)*vec2(.91,1.07);float edge=smoothstep(.12,.67,length(off));
-    base*=mix(1.,.85,edge);vec3 c=base+glow*(.36+min(1.,surge)*.48);
+    base*=mix(1.,.85-.2*dim,edge)*(1.-.3*dim);
+    // Soft-limit the bloom so stacked spell layers keep their shape instead of
+    // washing the frame white; the courtyard dims while a great rite is cast.
+    glow/=1.+.45*max(max(glow.r,glow.g),glow.b);
+    vec3 c=base+glow*(.34+min(1.,surge)*.2);
     gl_FragColor=vec4(c,1.);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -60,11 +64,11 @@ export function makeAtmosphere(renderer){
       w=Math.max(2,Math.round(width/4));h=Math.max(2,Math.round(height/4));
       horizontal.setSize(w,h);vertical.setSize(w,h);
     },
-    render(world,camera,surge=0){renderer.setRenderTarget(image);renderer.render(world,camera);
+    render(world,camera,surge=0,dim=0){renderer.setRenderTarget(image);renderer.render(world,camera);
       quad.material=blur;blur.uniforms.source.value=image.texture;blur.uniforms.extract.value=1;blur.uniforms.direction.value.set(1.8/w,0);
       renderer.setRenderTarget(horizontal);renderer.render(quadScene,ortho);
       blur.uniforms.source.value=horizontal.texture;blur.uniforms.extract.value=0;blur.uniforms.direction.value.set(0,1.8/h);
       renderer.setRenderTarget(vertical);renderer.render(quadScene,ortho);
-      quad.material=final;final.uniforms.surge.value=surge;renderer.setRenderTarget(null);renderer.render(quadScene,ortho);}
+      quad.material=final;final.uniforms.surge.value=surge;final.uniforms.dim.value=dim;renderer.setRenderTarget(null);renderer.render(quadScene,ortho);}
   };
 }

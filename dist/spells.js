@@ -14,8 +14,9 @@ const between = (a, b) => a + (b - a) * Math.random();
 const clampFloor = p => v3(clamp(p.x, -15, 15), 0, clamp(p.z, -13, 13));
 const THUNDER_BEATS = actionTiming('thunder','ultimate').impacts;
 const [GATE_OPEN,GATE_STEP,GATE_SLASH]=actionTiming('thunder','invoke').impacts;
-const THUNDER_COLORS = [0x98c9ff, 0xa59dff, 0x85edfe, 0xb8b8ff, 0xffdf8d];
-const TALISMAN_NAMES = ['壹', '貳', '叁', '肆', '伍'];
+// 五方雷部：东青、南赤、西白、北玄，末雷归中黄。符名与雷色一一对应。
+const THUNDER_COLORS = [0x63f0c6, 0xff8a5c, 0xe4eeff, 0xa08cff, 0xffd36a];
+const TALISMAN_NAMES = ['東', '南', '西', '北', '中'];
 // Each value encodes the painted bars from top to bottom.
 const TRIGRAMS = [7, 6, 5, 4, 3, 2, 1, 0];
 
@@ -248,7 +249,7 @@ function gateCurtain() {
   });
 }
 
-export function makeEffects(scene, onFeedback = () => {}, actors={}) {
+export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null) {
   const active=new Set(), actorPool=[];
   let preparing=false;
   const retained=new Map();
@@ -259,7 +260,13 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}) {
   const sphere=new THREE.SphereGeometry(1,12,8);
   const ringHandle=new THREE.TorusGeometry(.21,.043,6,20);
   const seals={thunder:sealMap('雷','#adf4ff'), summon:sealMap('敕','#ffe8ae')};
-  const papers=[...TALISMAN_NAMES,'令'].map(paperMap);
+  const papers=[...TALISMAN_NAMES,'令','鎮'].map(paperMap);
+  const quarterSeals=TALISMAN_NAMES.map((name,i)=>paint(256,256,(g,w,h)=>{
+    const tint='#'+new THREE.Color(THUNDER_COLORS[i]).getHexString();
+    g.translate(w/2,h/2);g.strokeStyle=tint;g.lineWidth=7;circle(g,112);g.lineWidth=3;circle(g,96);
+    for(let k=0;k<8;k++){g.save();g.rotate(TAU*k/8);g.fillStyle=tint;g.fillRect(-3,-122,6,16);g.restore();}
+    brush(g,name,0,4,118,tint);
+  }));
   const radiance=paint(160,160,(g,w,h)=>{
     const halo=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);
     for(const [stop,alpha] of [[0,.98],[.095,.85],[.22,.53],[.46,.20],[.72,.046],[1,0]]) {
@@ -281,6 +288,12 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}) {
     }
   });
   const door=doorMap();
+  const slashSeal=paint(384,384,(g,w,h)=>{
+    g.translate(w/2,h/2);g.rotate(.06);g.fillStyle='rgba(176,26,18,.9)';
+    g.beginPath();g.moveTo(-150,-140);g.lineTo(146,-152);g.lineTo(152,144);g.lineTo(-146,150);g.closePath();g.fill();
+    g.strokeStyle='rgba(255,214,150,.9)';g.lineWidth=8;g.strokeRect(-124,-124,248,248);
+    brush(g,'斬',0,8,206,'rgba(255,226,170,.96)');
+  });
   const plaqueMap=paint(512,130,(g,w,h)=>{
     g.fillStyle='#281e27';g.fillRect(0,0,w,h);g.strokeStyle='#f6c980';g.lineWidth=7;
     g.strokeRect(7,7,w-14,h-14);g.strokeStyle='#875027';g.lineWidth=3;g.strokeRect(17,16,w-34,h-32);
@@ -378,70 +391,71 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}) {
   }
   function flash(start,end,color,power,sky=false) {
     const length=start.distanceTo(end);
-    const spine=lightningPath(start,end,sky ? 1.42*power : Math.min(.7,length*.12),sky ? 21 : Math.max(4,Math.ceil(length*1.45)));
+    const spine=lightningPath(start,end,sky ? 1.05*power : Math.min(.7,length*.12),sky ? 21 : Math.max(4,Math.ceil(length*1.45)));
     const paths=[{points:spine,width:1}];
-    const branches=sky ? 12 : power>1 ? 4 : 1;
+    const branches=sky ? 7 : power>1 ? 4 : 1;
     for(let j=0;j<branches;j++){
       const k=Math.min(spine.length-2,1+Math.floor((spine.length-2)*(j+.2)/branches));
       const origin=spine[k], dir=end.clone().sub(start).normalize();
-      const magnitude=sky ? between(1.8,4.6)*power : between(.3,1.5);
+      const magnitude=sky ? between(1.3,3.1)*power : between(.3,1.5);
       const tip=origin.clone().addScaledVector(dir,magnitude*.65).add(v3(between(-1,1)*magnitude,between(-.4,.3)*magnitude,between(-1,1)*magnitude));
       if(tip.y<.12)tip.y=.12;
       const twig=lightningPath(origin,tip,magnitude*.19,sky?6:3);
-      paths.push({points:twig,width:between(.22,.48)});
+      paths.push({points:twig,width:between(.2,.42)});
       if(sky&&j%3===0) {
         const tip2=twig[3].clone().add(v3(between(-1,1),-.8,between(-1,1)));
-        paths.push({points:lightningPath(twig[3],tip2,.18,3),width:.16});
+        paths.push({points:lightningPath(twig[3],tip2,.18,3),width:.14});
       }
     }
     const final=sky&&power>1.4;
     if(sky) {
-      // Fork again at head height so the third-person camera catches the
-      // discharge spreading sideways even when the upper sky is out of frame.
-      const roots=final?8:5;
+      // A few roots fork near head height, so the strike still reads as one
+      // trunk landing on the talisman instead of a curtain of light.
+      const roots=final?6:3;
       for(let i=0;i<roots;i++){
         const origin=spine[spine.length-3-Math.floor(i%4)*2];
         const angle=TAU*(i+.17)/roots;
-        const spread=(final?4.5:2.9)*between(.75,1.2);
+        const spread=(final?3.0:2.1)*between(.75,1.2);
         const foot=end.clone().add(v3(Math.cos(angle)*spread,.12,Math.sin(angle)*spread));
         const shoulder=origin.clone().lerp(foot,.5);
-        shoulder.x+=Math.cos(angle)*.65; shoulder.y+=.7;
-        const upper=lightningPath(origin,shoulder,.37,5);
-        const lower=lightningPath(shoulder,foot,.55,6);
-        paths.push({points:upper.concat(lower.slice(1)),width:between(.29,.55)});
+        shoulder.x+=Math.cos(angle)*.5; shoulder.y+=.6;
+        const upper=lightningPath(origin,shoulder,.3,5);
+        const lower=lightningPath(shoulder,foot,.42,6);
+        paths.push({points:upper.concat(lower.slice(1)),width:between(.2,.34)});
       }
     }
-    const ttl=sky ? (final?1.02:.73) : .23;
+    const ttl=sky ? (final?.92:.62) : .23;
     track(ttl,fx=>{
-      const width=sky ? .15*power : .041*power;
-      const layers=conductors(paths,[width*(sky?4.8:4.4),width*1.85,width*.80]);
+      const width=sky ? (final?.072:.085)*power : .041*power;
+      const layers=conductors(paths,[width*(sky?3.1:4.4),width*1.55,width*.72]);
       const shell=mesh(fx.group,fx.own(layers[0]),basic(fx,color),0,0,0);
       const rim=mesh(fx.group,fx.own(layers[1]),basic(fx,color),0,0,0);
       const core=mesh(fx.group,fx.own(layers[2]),basic(fx,0xfffaff),0,0,0);
       const halos=[];
       if(sky){
-        for(const [u,r,stretch] of [[.61,8,1.8],[.78,4,2.5],[.98,4.2,.7]]) {
+        for(const [u,r,stretch] of [[.62,3.2,1.7],[.82,2.2,2.2],[.98,2.8,.6]]) {
           const point=spine[Math.min(spine.length-1,Math.round(u*(spine.length-1)))];
           halos.push({sprite:glow(fx,fx.group,point,color),r:r*power,stretch});
         }
       }
       fx.step=t=>{
-        const p=t/ttl, blink=sky ? .72+.28*Math.cos(t*41)**2:1;
-        const envelope=sky ? 1-smooth(final?.34:.23,1,p) : 1-p;
-        shell.material.opacity=(sky?.23:.13)*blink*envelope**1.6;
-        rim.material.opacity=.91*blink*envelope**1.1;
-        core.material.opacity=blink*envelope;
+        const p=t/ttl;
+        // Real strokes flash, dim, then re-strike along the same channel.
+        const level=sky ? Math.min(1,Math.exp(-t*7.5)+.8*Math.exp(-Math.abs(t-.17)*38)+(final?.7*Math.exp(-Math.abs(t-.34)*34):0))*(1-smooth(.55,1,p)) : 1-p;
+        shell.material.opacity=(sky?.15:.13)*level;
+        rim.material.opacity=.86*level;
+        core.material.opacity=Math.min(1,level*1.15);
         for(const {sprite,r,stretch} of halos) {
-          const size=r*(1+p*.26);sprite.scale.set(size,size*stretch,1);
-          sprite.material.opacity=(final?.48:.33)*envelope*blink;
+          const size=r*(1+p*.2);sprite.scale.set(size,size*stretch,1);
+          sprite.material.opacity=(final?.26:.17)*level;
         }
       };
     });
   }
   function groundLightning(center,final,color) {
-    const paths=[],count=final?16:9;
+    const paths=[],count=final?12:6;
     for(let i=0;i<count;i++){
-      const a=TAU*(i+between(-.22,.22))/count, radius=(final?6.0:3.2)*between(.64,1.16);
+      const a=TAU*(i+between(-.22,.22))/count, radius=(final?4.8:2.3)*between(.64,1.16);
       const tip=center.clone().add(v3(Math.cos(a)*radius,.095,Math.sin(a)*radius));
       const line=lightningPath(center.clone().add(v3(0,.115,0)),tip,.45,7);
       for(const p of line)p.y=between(.08,.15);
@@ -452,7 +466,7 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}) {
     }
     const ttl=final?.86:.50;
     track(ttl,fx=>{
-      const layers=conductors(paths,[final?.095:.070,final?.033:.022]);
+      const layers=conductors(paths,[final?.075:.055,final?.028:.02]);
       const outer=mesh(fx.group,fx.own(layers[0]),basic(fx,color),0,0,0);
       const inner=mesh(fx.group,fx.own(layers[1]),basic(fx,0xfff7d9),0,0,0);
       fx.step=t=>{
@@ -475,7 +489,7 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}) {
   function mark(target) {
     const p=target.clone();p.y+=1.65;
     track(.70,fx=>{
-      const talisman=glyph(fx,fx.group,0,.75,.33);
+      const talisman=glyph(fx,fx.group,6,.75,.33);
       fx.step=t=>{
         const u=t/.7;talisman.position.copy(p); talisman.position.y+=u*.78;
         const k=.66+.34*Math.sin(Math.min(1,u/.3)*PI/2);talisman.scale.set(.4*k,.83*k,1);
@@ -484,17 +498,31 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}) {
       };
     });
   }
+  // A ground arc between two talismans; the four outer strikes weave a square
+  // lightning net, then each corner feeds the eye before the central bolt.
+  function groundArc(fx,a,b,color){
+    const line=lightningPath(a.clone().setY(.1),b.clone().setY(.1),.32,9);for(const p of line)p.y=between(.08,.13);
+    const [outer,inner]=conductors([{points:line,width:1}],[.06,.022]);
+    return {outer:mesh(fx.group,fx.own(outer),basic(fx,color),0,0,0),inner:mesh(fx.group,fx.own(inner),basic(fx,0xfff8e4),0,0,0)};
+  }
   function thunder(target,onStrike=()=>{}) {
-    const center=clampFloor(target), offsets=[[-1.35,-.65],[1.10,-1.1],[1.15,.85],[-.9,1.2],[0,0]];
-    const ends=offsets.map(([x,z])=>clampFloor(center.clone().add(v3(x,0,z))));
+    const center=clampFloor(target);
+    // Square the four quarter talismans to the camera, so no stroke lands
+    // squarely between the lens and the master.
+    let ax=0,az=1;
+    if(camera){ax=camera.position.x-center.x;az=camera.position.z-center.z;const l=Math.hypot(ax,az)||1;ax/=l;az/=l;}
+    const corner=(u,v)=>center.clone().add(v3((u*az+v*ax)*2.6,0,(-u*ax+v*az)*2.6));
+    const ends=[corner(-.72,-.72),corner(.72,-.72),corner(.72,.72),corner(-.72,.72),center.clone()].map(clampFloor);
+    const away=v3(-ax,0,-az);
     feedback('seal',.65);
     track(3.45,fx=>{
       const deck=surface(fx,fx.group,v3(center.x,.05,center.z),7.6,seals.thunder);
       const tabs=TALISMAN_NAMES.map((n,i)=>glyph(fx,fx.group,i,1.34));
+      const burns=[],arcs=[];
       let next=0;
       fx.step=t=>{
-        const build=smooth(0,.36,t),fade=1-smooth(2.43,3.38,t);
-        deck.material.opacity=build*fade*(.53+.11*Math.sin(t*12));
+        const build=smooth(0,.36,t),fade=1-smooth(2.6,3.4,t);
+        deck.material.opacity=build*fade*(.34+.08*Math.sin(t*12));
         const scale=7.6*(.76+.24*build+.1*smooth(2.24,2.46,t));
         deck.scale.set(scale,scale,1);deck.rotation.z=t*.40;
         for(let i=0;i<5;i++){
@@ -503,28 +531,39 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}) {
           const r=2.77+.17*Math.sin(t*3+i);
           tabs[i].position.set(
             THREE.MathUtils.lerp(center.x+Math.sin(a)*r,ends[i].x,u),
-            THREE.MathUtils.lerp(1.25+i*.15+.32*Math.sin(t*4+i),.15,u),
+            THREE.MathUtils.lerp(1.25+i*.15+.32*Math.sin(t*4+i),.62,u),
             THREE.MathUtils.lerp(center.z+Math.cos(a)*r,ends[i].z,u));
-          tabs[i].material.opacity=build*(1-u);
-          tabs[i].material.rotation=Math.sin(a)*.24;
-          tabs[i].visible=t<THUNDER_BEATS[i];
+          tabs[i].material.opacity=build*(1-.35*u);
+          tabs[i].material.rotation=Math.sin(a)*.24*(1-u);
+          tabs[i].visible=t<THUNDER_BEATS[i]+.04;
+        }
+        for(const b of burns){
+          const k=smooth(0,.16,t-b.born);
+          b.mark.material.opacity=.92*k*fade;b.mark.scale.setScalar(b.size*(1.5-.5*k));
+        }
+        for(const arc of arcs){
+          const k=smooth(0,.1,t-arc.born)*fade,flicker=.62+.38*Math.sin(t*47+arc.seed)**2;
+          arc.outer.material.opacity=.7*k*flicker;arc.inner.material.opacity=k*flicker;
         }
         while(next<5 && t>=THUNDER_BEATS[next] && !fx.dead) {
-          const i=next++,p=ends[i],final=i===4,force=final?1.7:1, color=THUNDER_COLORS[i];
-          const base=p.clone().add(v3(0,.12,0)),angle=i*TAU/5+.5;
-          const top=p.clone().add(v3(Math.cos(angle)*(final?.8:3.8),final?27:20,Math.sin(angle)*(final?.8:3.8)));
+          const i=next++,p=ends[i],final=i===4,force=final?1.65:1, color=THUNDER_COLORS[i];
+          const base=p.clone().add(v3(0,.12,0));
+          // Lean every channel away from the lens: the stroke stays a crisp
+          // silhouette above the target instead of a wall across the screen.
+          const top=p.clone().addScaledVector(away,final?1.2:3.4).add(v3(between(-1.2,1.2),final?27:20,between(-1.2,1.2)));
           flash(top,base,color,force,true);
           if(final) {
-            for(let j=0;j<3;j++){
-              const a=j*TAU/3;
-              flash(base.clone().add(v3(Math.cos(a)*3.2,7.1,Math.sin(a)*3.2)),base,0xb7a9ff,.60);
-            }
-            scorch(p,3.55);
+            for(let j=0;j<4;j++)arcs.push({...groundArc(fx,ends[j],p,THUNDER_COLORS[j]),born:t,seed:j*1.7});
+            scorch(p,3.4);
+          }else{
+            burns.push({mark:surface(fx,fx.group,v3(p.x,.06,p.z),1,quarterSeals[i],0xffffff),born:t,size:1.55});
+            if(i>0)arcs.push({...groundArc(fx,ends[i-1],p,color),born:t,seed:i*2.3});
+            if(i===3)arcs.push({...groundArc(fx,p,ends[0],color),born:t,seed:9.1});
           }
-          blast(p,color,final?5.25:2.65,final?.72:.43);
+          blast(p,color,final?5.0:2.2,final?.7:.4);
           groundLightning(p,final,color);
-          sparks(p,final?120:52,color,final?7.8:5.1,final?1.05:.68,9);
-          feedback('thunder',final?1:.53);
+          sparks(p,final?70:28,color,final?7:4.6,final?1:.6,9);
+          feedback('thunder',final?1:.5);
           onStrike(p.clone(),i);
         }
       };
@@ -625,32 +664,39 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}) {
     // judge, at blade height. The marks on the ground follow the same heading.
     track(ttl,fx=>{
       fx.group.position.copy(pos);fx.group.rotation.y=yaw;
+      // Tilt the sweep into a falling diagonal cleave, from the judge's raised
+      // right shoulder down across the target, in ink, cinnabar and gold.
+      const cleave=new THREE.Group();cleave.position.set(0,1.5,0);cleave.rotation.z=-.62;fx.group.add(cleave);
       const blades=[];
-      const geo=fx.own(arcSheet(5.25,3.18));
-      for(const [tint,scale,lift,add] of [[0x351d26,1.13,-.26,false],[0xfda141,1.05,-.12,true],[0xffdda0,1,0,true],[0xfff2c7,.96,.10,true]]) {
-        const blade=mesh(fx.group,geo,basic(fx,tint,add,brushStroke),0,1.66+lift,-2.0,scale,scale,scale);
+      const geo=fx.own(arcSheet(4.6,3.0));
+      for(const [tint,scale,lift,add] of [[0x2a141c,1.1,-.2,false],[0xd63a22,1.04,-.08,true],[0xffc163,.98,.04,true]]) {
+        const blade=mesh(cleave,geo,basic(fx,tint,add,brushStroke),0,lift,-1.7,scale,scale,scale);
         blades.push(blade);
       }
-      const centerFlare=glow(fx,fx.group,v3(0,1.05,0),0xffac5b);
+      const centerFlare=glow(fx,fx.group,v3(0,1.05,0),0xff7a3a);
       fx.step=t=>{
         const u=t/ttl,reveal=1-(1-u)**4;
         for(let i=0;i<blades.length;i++){
           const blade=blades[i];
-          blade.rotation.y=-1.15+1.96*reveal+(2-i)*.08;
-          blade.scale.y=1.1-i*.13;
-          blade.material.opacity=(i===0?.94:i===1?.97:.91)*(1-u)**1.15;
+          blade.rotation.y=-1.25+2.1*reveal+(2-i)*.07;
+          blade.scale.y=.8-i*.12;
+          blade.material.opacity=(i===0?.9:i===1?.95:.88)*(1-u)**1.2;
         }
-        centerFlare.scale.set(7.8+u*3.5,2.5+u,1);centerFlare.material.opacity=(1-u)**1.9*.83;
+        centerFlare.scale.set(4.6+u*2,1.6+u*.6,1);centerFlare.material.opacity=(1-u)**2.2*.42;
       };
     });
     const base=pos.clone().add(v3(0,.13,0));
     for(let i=0;i<3;i++) {
       const a=yaw-.43+i*.43;
       const tip=base.clone().add(v3(Math.sin(a)*between(3.9,6.2),.012,Math.cos(a)*between(3.9,6.2)));
-      flash(base,tip,i===1?0xffe9a5:0xfd9044,.94);
+      flash(base,tip,i===1?0xffd08a:0xf0602e,.72);
     }
-    scorch(pos,3.25);blast(pos,0xffac52,5.5,.73);
-    sparks(pos,96,0xffa94b,7.7,1.2,7);
+    track(2.6,fx=>{
+      const stamp=surface(fx,fx.group,v3(pos.x,.07,pos.z),3.4,slashSeal,0xffffff,false);stamp.rotation.z=-yaw;
+      fx.step=t=>{const k=smooth(0,.12,t);stamp.scale.setScalar(3.4*(1.45-.45*k));stamp.material.opacity=.95*k*(1-smooth(1.7,2.6,t));};
+    });
+    scorch(pos,3.25);blast(pos,0xff8a3c,5.2,.66);
+    sparks(pos,60,0xffa94b,7,1.1,7);
   }
 
   function summon(target,onSlash=()=>{}) {

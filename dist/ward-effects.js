@@ -397,12 +397,14 @@ export function makeWardEffects(kit) {
       fx.step=t=>{
         const form=ease(.03,.56,t),rise=ease(.24,1.21,t),suspend=ease(1.50,2.16,t);
         const drop=THREE.MathUtils.clamp((t-2.11)/(impact-2.11),0,1)**3;
-        const retreat=ease(2.79,3.66,t);
+        const retreat=ease(2.95,3.5,t);
         const y=(.12+1.52*rise+.53*suspend)*(1-drop);
         const scale=(.45+.78*form+.13*suspend)*(1-retreat);
         lion.visible=t>.035&&retreat<.995;
         lion.scale.setScalar(scale);
-        lion.position.y=y-.11*ease(impact,impact+.10,t);
+        // After the slam the seal is driven into the floor, leaving its print
+        // and the fighters around it in clear view.
+        lion.position.y=y-.11*ease(impact,impact+.10,t)-2.6*ease(impact+.16,impact+.78,t);
         lion.rotation.y=-.55+.90*rise+.18*Math.sin(t*2.5)*(1-drop)+.13*drop;
         incense.material.opacity=form*(1-ease(impact,impact+.48,t))*(.56+.17*Math.sin(t*6));
         incense.rotation.z=.10*Math.sin(t*1.8);

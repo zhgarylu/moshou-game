@@ -67,7 +67,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       const amp=kind==='thunder'?.19:kind==='slash'||kind==='sealStrike'?.33:kind==='gong'?.1:.08;
       shake=Math.max(shake,power*amp);if(kind==='thunder'||kind==='slash'||kind==='sealStrike')surge=Math.max(surge,power);
     }
-  },{judge:()=>makeBattleActor('judge'),priest:()=>makeBattleActor('priest')});
+  },{judge:()=>makeBattleActor('judge'),priest:()=>makeBattleActor('priest')},cam);
   let special=fx.forClass(classId);
   async function selectClass(id){
     if(classId===id)return;
@@ -84,7 +84,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function breakTether(){tetherEnemy=null;tetherTime=0;enemySigns.tether(null);}
   function dismiss(e){e.ring.visible=false;e.sign?.hide();}
   let nextWave=0,phase=0,yaw=0,pitch=.40,shake=0,surge=0,hurt=0,immune=0,dash=0,cool={},cast=0,castMax=0;
-  let castPose='attack',castYaw=0,evade=0,focus=null,focusLife=0,focusSpan=0,focusRite=false,primary=null,bannerTime=0,msgTime=0,hudTick=0,loopId=0,prev=0,activeTouch=null;
+  let castPose='attack',castYaw=0,evade=0,focus=null,focusLife=0,focusSpan=0,focusRite=false,focusGate=false,dim=0,primary=null,bannerTime=0,msgTime=0,hudTick=0,loopId=0,prev=0,activeTouch=null;
   const velocity=V(),masterMotion={};
   const preferredScale=Math.min(2,Math.max(1.3,devicePixelRatio));
   let pixelScale=preferredScale,perfTime=0,perfCount=0;
@@ -128,14 +128,14 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   function start(){
     cancelAnimationFrame(loopId);fx.clear();while(enemies.length)release(enemies.pop());keys.clear();joy.x=joy.y=0;
     Object.assign(cool={},{mark:0,chain:0,dodge:0,thunder:0,summon:0,priest:0});t=0;timeLeft=duration;hp=100;seals=3;sealCharge=0;kills=markCount=chainCount=thunderCount=summonCount=priestCount=0;
-    phase=nextWave=0;yaw=0;pitch=.40;shake=surge=hurt=immune=dash=cast=focusLife=focusSpan=hudTick=perfTime=perfCount=0;primary=null;focus=null;focusRite=false;activeTouch=null;
+    phase=nextWave=0;yaw=0;pitch=.40;shake=surge=dim=hurt=immune=dash=cast=focusLife=focusSpan=hudTick=perfTime=perfCount=0;primary=null;focus=null;focusRite=false;activeTouch=null;
     wardHp=wardTime=envoyKills=followTime=0;basicStrike=null;breakTether();
     pos.set(0,0,5);velocity.set(0,0,0);evade=0;master.root.rotation.set(0,Math.PI,0);master.resetMotion?.();master.animate('idle',0,1);reticle.visible=false;groundMarker.visible=false;hoverPoint=null;
     resetCamera();court.setSurge(0);punch.intensity=0;ui.damage(0);ui.target(null);ui.banner('','');ui.notice('');
     state='play';audio.ambience(true);banner('棺铃初动','槐阴镇 · 第一更',1.8);
     notice('黑无常冲撞时向侧面闪避。R '+spec.thunder.name+'　Q 请钟馗　E 请道长',5);
     while(nextWave<waves.length&&waves[nextWave][0]===0){const [,type,x,z]=waves[nextWave++];spawn(type,x,z);}
-    pickPrimary();syncHud();resize();cameraStep(1);atmosphere.render(scene,cam,surge);canvas.focus({preventScroll:true});prev=performance.now();loopId=requestAnimationFrame(frame);
+    pickPrimary();syncHud();resize();cameraStep(1);atmosphere.render(scene,cam,surge,dim);canvas.focus({preventScroll:true});prev=performance.now();loopId=requestAnimationFrame(frame);
   }
   function finish(win){
     if(state!=='play')return;state='over';keys.clear();joy.x=joy.y=0;audio.ambience(false);audio.sound(win?'win':'lose');ui.target(null);ui.notice('');ui.banner('','');ui.damage(0);
@@ -249,7 +249,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       focus=at.clone();spellLight.position.copy(at);spellLight.position.y=invoking?5.8:3.85;
       if(invoking){spellLight.position.x-=2.6;spellLight.position.z+=2.1;}
       spellLight.color.set(priest?0xffd68a:invoking?0xffbe89:spec.light);
-      focusRite=priest;focusLife=focusSpan=priest?sevenStars.duration:invoking?4.3:special?4.16:3.1;
+      focusRite=priest;focusGate=name==='summon'||(name==='thunder'&&classId==='ward');focusLife=focusSpan=priest?sevenStars.duration:invoking?4.3:special?4.16:3.1;
       pose(invoking?'invoke':'ultimate',at);
       if(!priest)fx.castTrails(invoking?'summon':classId,castingHand,at);
       if(priest){
@@ -372,18 +372,18 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     }
   }
   function cameraStep(dt){
-    const forwardX=-Math.sin(yaw),forwardZ=-Math.cos(yaw),skillView=focusLife>0,rite=skillView&&focusRite;
+    const forwardX=-Math.sin(yaw),forwardZ=-Math.cos(yaw),skillView=focusLife>0,rite=skillView&&focusRite,gate=skillView&&focusGate;
     const desired=desiredFocus.set(pos.x+forwardX*2.35,1.15,pos.z+forwardZ*2.35);
     const close=skillView?Math.min(1,focusLife/.55,(focusSpan-focusLife)/.32):0;
-    if(skillView){tmp.copy(focus);tmp.y=rite?3.25:focusSpan>4?3.15:2.45;desired.lerp(tmp,close*.79);}
-    camFocus.lerp(desired,1-Math.exp(-dt*7));const radius=6.45+close*(rite?(cam.aspect<1?5.8:4.1):1.65),range=radius*Math.cos(pitch);
-    desiredCam.set(clamp(pos.x-forwardX*range,-15.3,15.3),1.55+Math.sin(pitch)*radius+close*.65,clamp(pos.z-forwardZ*range,-14.4,14.8));
+    if(skillView){tmp.copy(focus);tmp.y=rite?3.25:gate?3.4:focusSpan>4?3.15:2.45;desired.lerp(tmp,close*.79);}
+    camFocus.lerp(desired,1-Math.exp(-dt*7));const radius=6.45+close*(rite?(cam.aspect<1?5.8:4.1):gate?(cam.aspect<1?5.2:3.6):1.65),range=radius*Math.cos(pitch);
+    desiredCam.set(clamp(pos.x-forwardX*range,-15.3,15.3),1.55+Math.sin(pitch)*radius+close*(gate?1.3:.65),clamp(pos.z-forwardZ*range,-14.4,14.8));
     if(skillView){const dx=focus.x-pos.x,dz=focus.z-pos.z;desiredCam.x+=clamp(dx*.34,-4,4)*close;desiredCam.z+=clamp(dz*.34,-4,4)*close;}
     const near=desiredCam.distanceTo(pos);if(near<4.5)desiredCam.y+=4.5-near;
     camBase.lerp(desiredCam,1-Math.exp(-dt*9));cam.position.copy(camBase);
     if(shake>.008&&!slowMotionMedia.matches){cam.position.x+=Math.sin(t*53)*shake*.68;cam.position.y+=Math.sin(t*43)*shake*.42;}
     portraitLight.position.copy(cam.position);portraitLight.position.y+=2.5;portraitLight.position.x-=2.2;
-    portraitLight.target.position.copy(camFocus);cam.lookAt(camFocus);cam.updateMatrixWorld();cam.fov=51+close*(rite?5:1);cam.updateProjectionMatrix();
+    portraitLight.target.position.copy(camFocus);cam.lookAt(camFocus);cam.updateMatrixWorld();cam.fov=51+close*(rite||gate?5:1);cam.updateProjectionMatrix();
   }
   function syncHud(){
     const present={};
@@ -433,7 +433,8 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
     advanceBasic();
     enemiesStep(dt);if(state!=='play')return;
     enemySigns.tether(tetherEnemy?.actor.root.position,pos,t);fx.update(dt);shake=Math.max(0,shake-dt*1.0);surge=Math.max(0,surge-dt*3.4);hurt=Math.max(0,hurt-dt*1.6);
-    court.setSurge(surge*.64);court.update(dt,t);punch.intensity=surge*1.45;spellLight.intensity=focusLife>0?(focusSpan>4?14:18)+surge*(focusSpan>4?26:70):0;audio.update();
+    dim+=((focusLife>.25?1:0)-dim)*(1-Math.exp(-dt*(focusLife>.25?7:3)));
+    court.setSurge(surge*.4);court.update(dt,t);punch.intensity=surge*.7;spellLight.intensity=focusLife>0?(focusSpan>4?12:13)+surge*(focusSpan>4?16:24):0;audio.update();
     cameraStep(dt);primary=pickPrimary();
     groundMarker.visible=!!hoverPoint&&(keys.has('ShiftLeft')||keys.has('ShiftRight'));if(groundMarker.visible)groundMarker.position.set(hoverPoint.x,.067,hoverPoint.z);
     if(primary){const p=primary.actor.root.position;reticle.visible=true;reticle.position.set(p.x,.049,p.z);reticle.scale.setScalar(primary.type===2?1.05:.7);
@@ -455,7 +456,7 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
       perfTime=perfCount=0;
     }
     let left=dt;while(left>.00001&&state==='play'){const chunk=Math.min(left,.05);step(chunk);left-=chunk;}
-    atmosphere.render(scene,cam,surge);if(state==='play')loopId=requestAnimationFrame(frame);
+    atmosphere.render(scene,cam,surge,dim);if(state==='play')loopId=requestAnimationFrame(frame);
   }
   function pointAt(ev){const r=canvas.getBoundingClientRect();ray.setFromCamera(new THREE.Vector2((ev.clientX-r.left)/r.width*2-1,1-(ev.clientY-r.top)/r.height*2),cam);return ray.ray.intersectPlane(plane,V());}
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -465,5 +466,11 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   canvas.addEventListener('pointerup',ev=>{if(activeTouch?.id!==ev.pointerId)return;const tap=activeTouch.dist<8&&activeTouch.button===0;activeTouch=null;if(tap)skill('mark',pointAt(ev));});
   canvas.addEventListener('pointercancel',()=>activeTouch=null);canvas.addEventListener('pointerleave',()=>hoverPoint=null);
   await prepareEntry();
-  return {start,pause,resume,leave,selectClass,skill,keys,joy,get state(){return state;}};
+  // ?debug: step a paused fight by fixed frames so spell beats can be captured exactly.
+  function debugAdvance(seconds,cast){
+    if(state!=='paused')return false;state='play';if(cast){cool[cast]=0;skill(cast);}
+    for(let left=seconds;left>1e-5&&state==='play';left-=1/60)step(Math.min(left,1/60));
+    atmosphere.render(scene,cam,surge,dim);if(state==='play')state='paused';return true;
+  }
+  return {start,pause,resume,leave,selectClass,skill,keys,joy,debugAdvance,debugScene:scene,get state(){return state;}};
 }
