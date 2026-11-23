@@ -120,38 +120,82 @@ export function makeFlyerActor(){
   return actor;
 }
 
-// 五鬼：钟馗座下五方小鬼，戴青、赤、白、玄、黄五色傩面，矮身短角，蹦跳着追打敌人。
+// 五鬼：钟馗座下的「五鬼闹判」小鬼。赤膊短裙、乱发冲天、头生独角或双角，
+// 圆睁怒目咧嘴獠牙；肤色按五方分青、赤、白、黑、黄，各执一件家伙：剑、伞、灯笼、葫芦、钢叉。
+const impSkins=[0x2f9a78,0xc8402a,0xd8d2c4,0x2e2a3a,0xd09a2a];
 const impColors=[0x3fe0a0,0xff5030,0xf4f0e4,0x7a66ff,0xffc040];
 let impFaces=null;
 function impFace(i){
-  impFaces??=impColors.map(c=>canvasTexture(128,128,(g,w,h)=>{
-    g.fillStyle='#'+new THREE.Color(c).getHexString();g.fillRect(0,0,w,h);
-    g.fillStyle='#120c08';g.beginPath();g.ellipse(40,54,14,9,-.3,0,TAU);g.ellipse(88,54,14,9,.3,0,TAU);g.fill();
-    g.fillStyle='#ffe28a';g.beginPath();g.arc(40,54,4,0,TAU);g.arc(88,54,4,0,TAU);g.fill();
-    g.strokeStyle='#120c08';g.lineWidth=5;g.beginPath();g.moveTo(26,36);g.lineTo(54,44);g.moveTo(102,36);g.lineTo(74,44);g.stroke();
-    g.fillStyle='#5a0d0a';g.beginPath();g.ellipse(64,92,26,12,0,0,TAU);g.fill();
-    g.fillStyle='#fff6e0';for(const x of [48,80]){g.beginPath();g.moveTo(x-5,84);g.lineTo(x+5,84);g.lineTo(x,98);g.closePath();g.fill();}
+  impFaces??=impSkins.map((c,k)=>canvasTexture(256,256,(g,w,h)=>{
+    const skin='#'+new THREE.Color(c).getHexString();g.fillStyle=skin;g.fillRect(0,0,w,h);
+    // 横肉与皱纹
+    g.strokeStyle='rgba(0,0,0,.35)';g.lineWidth=4;for(const y of [60,74]){g.beginPath();g.moveTo(70,y);g.quadraticCurveTo(128,y-14,186,y);g.stroke();}
+    // 粗眉倒竖
+    g.fillStyle='#120a08';for(const s of [-1,1]){g.beginPath();g.moveTo(128+s*12,100);g.lineTo(128+s*84,70);g.lineTo(128+s*80,88);g.lineTo(128+s*16,112);g.closePath();g.fill();}
+    // 铜铃眼
+    for(const s of [-1,1]){const x=128+s*48;g.fillStyle='#fff6d0';g.beginPath();g.arc(x,122,26,0,TAU);g.fill();g.lineWidth=5;g.strokeStyle='#120a08';g.stroke();
+      g.fillStyle=k===3?'#ff3020':'#d01810';g.beginPath();g.arc(x+s*-4,124,12,0,TAU);g.fill();g.fillStyle='#000';g.beginPath();g.arc(x+s*-4,124,5,0,TAU);g.fill();}
+    // 狮子鼻
+    g.fillStyle='rgba(0,0,0,.45)';g.beginPath();g.ellipse(112,160,12,9,0,0,TAU);g.ellipse(144,160,12,9,0,0,TAU);g.fill();
+    // 咧到耳根的大嘴与獠牙
+    g.fillStyle='#3a0606';g.beginPath();g.moveTo(52,180);g.quadraticCurveTo(128,250,204,180);g.quadraticCurveTo(128,205,52,180);g.fill();
+    g.fillStyle='#fff4dc';for(const x of [76,104,152,180]){g.beginPath();g.moveTo(x-8,186);g.lineTo(x+8,186);g.lineTo(x,x===76||x===180?168:204);g.closePath();g.fill();}
   }));
   return impFaces[i%5];
 }
+function prop(i,mat,trim){
+  const g=new THREE.Group();
+  if(i===0){const b=new THREE.Mesh(new THREE.BoxGeometry(.06,1.1,.02),new THREE.MeshStandardMaterial({color:0xd8e4e8,metalness:.8,roughness:.3}));b.position.y=.55;g.add(b);
+    const h=new THREE.Mesh(new THREE.BoxGeometry(.28,.05,.06),trim);g.add(h);}
+  if(i===1){const pole=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.3,6),trim);pole.position.y=.6;g.add(pole);
+    const top=new THREE.Mesh(new THREE.ConeGeometry(.75,.35,12,1,true),new THREE.MeshStandardMaterial({color:0x9a1a14,side:THREE.DoubleSide,roughness:.8}));top.position.y=1.25;g.add(top);}
+  if(i===2){const stick=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.9,6),trim);stick.position.y=.45;stick.rotation.z=.5;g.add(stick);
+    const lamp=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),new THREE.MeshBasicMaterial({color:0xffe9b0}));lamp.scale.y=1.25;lamp.position.set(-.38,.72,0);g.add(lamp);}
+  if(i===3){const gourd=new THREE.Group();for(const [y,r] of [[.16,.16],[.4,.11]]){const b=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),new THREE.MeshStandardMaterial({color:0xc89030,roughness:.6}));b.position.y=y;gourd.add(b);}g.add(gourd);}
+  if(i===4){const pole=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.6,6),trim);pole.position.y=.75;g.add(pole);
+    for(const x of [-.12,0,.12]){const tine=new THREE.Mesh(new THREE.ConeGeometry(.03,.32,6),new THREE.MeshStandardMaterial({color:0xd8e4e8,metalness:.8,roughness:.3}));tine.position.set(x,1.65,0);g.add(tine);}}
+  return g;
+}
 export function makeImpActor(i=0){
+  i%=5;
   const root=new THREE.Group(),body=new THREE.Group();root.add(body);root.name='ally-imp';
-  const robe=new THREE.MeshStandardMaterial({color:0x2a1c18,roughness:.9,emissive:impColors[i%5],emissiveIntensity:.08});
-  const torso=new THREE.Mesh(new THREE.ConeGeometry(.34,.75,8),robe);torso.position.y=.42;
-  const face=new THREE.Mesh(new THREE.SphereGeometry(.26,16,12),lit(impFace(i),{emissiveIntensity:.35}));face.position.y=.98;face.rotation.y=-Math.PI/2;
-  const hornMat=new THREE.MeshStandardMaterial({color:0xe8dcc0,roughness:.6});
-  for(const s of [-1,1]){const h=new THREE.Mesh(new THREE.ConeGeometry(.05,.22,6),hornMat);h.position.set(s*.13,1.22,0);h.rotation.z=-s*.4;body.add(h);}
-  const arms=[-1,1].map(s=>{const a=new THREE.Mesh(new THREE.BoxGeometry(.09,.4,.09),robe);a.position.set(s*.3,.6,0);body.add(a);return a;});
-  body.add(torso,face);root.traverse(o=>{if(o.isMesh)o.castShadow=true;});
-  // 每只小鬼裹着本方颜色的鬼火，跑动时拖出火尾。
-  const fireMat=new THREE.SpriteMaterial({map:assets().flame,color:impColors[i%5],transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
-  const fires=[0,1,2].map(k=>{const f=new THREE.Sprite(fireMat);f.position.set(0,.55+k*.05,-.25-k*.32);f.scale.setScalar(1.3-k*.3);body.add(f);return f;});
-  const halo=new THREE.Sprite(fireMat);halo.scale.setScalar(2.2);halo.position.y=.7;body.add(halo);
+  const skin=new THREE.MeshStandardMaterial({color:impSkins[i],roughness:.75,emissive:impColors[i],emissiveIntensity:.18});
+  const cloth=new THREE.MeshStandardMaterial({color:0x8a1a12,roughness:.9}),trim=new THREE.MeshStandardMaterial({color:0x3a2418,roughness:.8});
+  const hairMat=new THREE.MeshStandardMaterial({color:i===2?0x1a1a1a:0x0c0806,roughness:.9,emissive:impColors[i],emissiveIntensity:.25});
+  // 鼓肚短身
+  const belly=new THREE.Mesh(new THREE.SphereGeometry(.3,14,12),skin);belly.scale.set(1,1.15,.9);belly.position.y=.72;
+  const chest=new THREE.Mesh(new THREE.SphereGeometry(.24,12,10),skin);chest.position.y=.98;
+  const skirt=new THREE.Mesh(new THREE.ConeGeometry(.36,.32,10,1,true),cloth);skirt.position.y=.5;skirt.material.side=THREE.DoubleSide;
+  // 大头
+  const head=new THREE.Group();head.position.y=1.35;
+  const face=new THREE.Mesh(new THREE.SphereGeometry(.3,18,14),lit(impFace(i),{emissiveIntensity:.3}));face.rotation.y=-Math.PI/2;face.scale.set(1.05,1,.95);head.add(face);
+  // 乱发冲天
+  for(let k=0;k<9;k++){const a=-1.1+k*.275,spike=new THREE.Mesh(new THREE.ConeGeometry(.07,.42+.12*Math.sin(k*1.7),5),hairMat);
+    spike.position.set(Math.sin(a)*.22,.22+Math.cos(a)*.08,-.08);spike.rotation.set(-.35,0,-a*.9);head.add(spike);}
+  // 独角或双角
+  const hornMat=new THREE.MeshStandardMaterial({color:0xf0e2c0,roughness:.5});
+  for(const x of (i%2?[0]:[-.14,.14])){const h=new THREE.Mesh(new THREE.ConeGeometry(.05,.3,6),hornMat);h.position.set(x,.32,.1);h.rotation.set(.25,0,-x*2);head.add(h);}
+  body.add(belly,chest,skirt,head);
+  // 细胳膊细腿
+  const limb=(len,r)=>new THREE.Mesh(new THREE.CylinderGeometry(r,r*.8,len,6),skin);
+  const arms=[-1,1].map(s=>{const pv=new THREE.Group();pv.position.set(s*.3,1.02,0);const a=limb(.5,.06);a.position.y=-.25;pv.add(a);body.add(pv);return pv;});
+  const legs=[-1,1].map(s=>{const pv=new THREE.Group();pv.position.set(s*.13,.45,0);const l=limb(.45,.07);l.position.y=-.22;pv.add(l);body.add(pv);return pv;});
+  const item=prop(i,skin,trim);item.position.set(0,-.48,.06);arms[1].add(item);
+  if(i===3){item.position.set(0,-.5,.1);}
+  root.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+  // 本方颜色的鬼火：脚下一团、身后拖尾。
+  const fireMat=new THREE.SpriteMaterial({map:assets().flame,color:impColors[i],transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  const fires=[0,1,2].map(k=>{const f=new THREE.Sprite(fireMat);f.position.set(0,.45+k*.05,-.25-k*.32);f.scale.setScalar(1.2-k*.3);body.add(f);return f;});
+  const halo=new THREE.Sprite(fireMat);halo.scale.setScalar(2);halo.position.y=.2;body.add(halo);
   function animate(pose='walk',time=0,p=1){
-    body.position.y=Math.abs(Math.sin(time*11))*.22;body.rotation.set(0,0,Math.sin(time*11)*.12);
-    arms.forEach((a,k)=>{a.rotation.x=pose==='attack'?-2.2+2*p:Math.sin(time*11+k*Math.PI)*.8;});
-    if(pose==='attack')body.rotation.x=.5*Math.sin(Math.PI*p);
-    fireMat.opacity=.75+.25*Math.sin(time*17);halo.scale.setScalar(pose==='attack'?3:2.2);
+    const run=time*12;
+    body.position.y=Math.abs(Math.sin(run))*.2;body.rotation.set(.18,0,Math.sin(run)*.1);
+    legs.forEach((l,k)=>l.rotation.x=Math.sin(run+k*Math.PI)*.9);
+    arms[0].rotation.x=Math.sin(run+Math.PI)*.9;arms[0].rotation.z=-.3;
+    arms[1].rotation.x=pose==='attack'?-2.6+2.4*p:-.6+Math.sin(run)*.4;arms[1].rotation.z=.2;
+    head.rotation.z=Math.sin(run*.5)*.15;head.rotation.y=Math.sin(time*3)*.3;
+    if(pose==='attack')body.rotation.x=.18+.4*Math.sin(Math.PI*p);
+    fireMat.opacity=.7+.3*Math.sin(time*17);halo.scale.setScalar(pose==='attack'?2.8:2);
   }
   return {root,animate,resetMotion(){},dispose(){}};
 }

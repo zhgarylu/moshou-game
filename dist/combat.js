@@ -70,8 +70,8 @@ export async function createCombat(host,ui,audio,firstClass='thunder'){
   const spellLight=new THREE.PointLight(0xb3edff,0,20,1.6);scene.add(spellLight);
   const fx=makeEffects(scene,(kind,power=1)=>{
     audio.sound(kind,power);
-    if(['thunder','slash','gong','rumble','sealStrike'].includes(kind)){
-      const amp=kind==='thunder'?.19:kind==='slash'||kind==='sealStrike'?.33:kind==='gong'?.1:.08;
+    if(['thunder','slash','gong','rumble','sealStrike','devour'].includes(kind)){
+      const amp=kind==='devour'?.42:kind==='thunder'?.19:kind==='slash'||kind==='sealStrike'?.33:kind==='gong'?.1:.08;
       shake=Math.max(shake,power*amp);if(kind==='thunder'||kind==='slash'||kind==='sealStrike')surge=Math.max(surge,power);
     }
   },{judge:()=>makeBattleActor('judge'),priest:()=>makeBattleActor('priest')},cam);

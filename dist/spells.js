@@ -759,28 +759,97 @@ export function makeEffects(scene, onFeedback = () => {}, actors={}, camera=null
     ghosts:{glyph:'鬼',ink:'#9dffd8',tint:0x6dffc0,deep:[.02,.18,.14],hot:[.25,1,.68]},
   };
   for(const look of Object.values(judgeLooks))look.map=sealMap(look.glyph,look.ink);
-  // 啖鬼：一张血红鬼口在猎物身前张开，獠牙合拢时一口咬下。
+  // 啖鬼：猎物身前浮出一张饕餮青铜兽面——卷角、雷纹、怒目，下颚张开到极限后猛然合拢。
+  // 上脸与下颚分画两张贴图，下颚单独开合；身后黑红鬼烟旋转。
+  function bronzeLines(g,w,h,color){
+    g.strokeStyle=color;g.lineWidth=5;g.lineCap='round';
+    for(const s of [-1,1])for(let k=0;k<3;k++){
+      g.beginPath();const cx=w/2+s*(120+k*70),cy=h*.62-k*18;
+      for(let i=0;i<=40;i++){const a=i/40*TAU*1.6,r=8+i*.9;g.lineTo(cx+s*Math.cos(a)*r,cy+Math.sin(a)*r);}g.stroke();
+    }
+  }
+  const taotieTop=paint(1024,640,(g,w,h)=>{
+    const cx=w/2;
+    // 卷角
+    for(const s of [-1,1]){
+      g.save();g.translate(cx+s*300,170);g.scale(s,1);
+      const horn=g.createLinearGradient(0,0,180,-160);horn.addColorStop(0,'#4a0a08');horn.addColorStop(1,'#d8a040');
+      g.fillStyle=horn;g.beginPath();g.moveTo(-40,80);g.bezierCurveTo(60,-60,220,-140,200,-30);g.bezierCurveTo(190,30,120,10,130,-30);
+      g.bezierCurveTo(90,20,40,60,40,110);g.closePath();g.fill();g.strokeStyle='#ffd27a';g.lineWidth=6;g.stroke();g.restore();
+    }
+    // 兽面主体
+    const face=g.createRadialGradient(cx,360,40,cx,330,460);face.addColorStop(0,'#9a1810');face.addColorStop(.6,'#4a0806');face.addColorStop(1,'#140202');
+    g.fillStyle=face;g.beginPath();g.moveTo(cx-430,640);g.bezierCurveTo(cx-480,360,cx-360,150,cx,140);g.bezierCurveTo(cx+360,150,cx+480,360,cx+430,640);g.closePath();g.fill();
+    g.strokeStyle='#e0a848';g.lineWidth=10;g.stroke();
+    bronzeLines(g,w,h,'rgba(255,200,110,.55)');
+    // 额心火纹
+    g.fillStyle='#ffc860';g.beginPath();g.moveTo(cx,170);g.lineTo(cx+40,260);g.lineTo(cx,330);g.lineTo(cx-40,260);g.closePath();g.fill();
+    // 怒眉
+    for(const s of [-1,1]){g.fillStyle='#1a0404';g.beginPath();g.moveTo(cx+s*40,300);g.lineTo(cx+s*330,220);g.lineTo(cx+s*320,280);g.lineTo(cx+s*60,350);g.closePath();g.fill();
+      g.strokeStyle='#ffd27a';g.lineWidth=5;g.stroke();}
+    // 怒目：上挑的杏仁眼压在眉下，金瞳血丝，眼角拖出火焰纹；额心再开一只竖目。
+    for(const sd of [-1,1]){
+      const ex=cx+sd*200,ey=392;
+      const halo=g.createRadialGradient(ex,ey,20,ex,ey,120);halo.addColorStop(0,'rgba(255,190,80,.85)');halo.addColorStop(1,'rgba(255,40,10,0)');
+      g.fillStyle=halo;g.beginPath();g.arc(ex,ey,120,0,TAU);g.fill();
+      g.save();g.translate(ex,ey);g.rotate(sd*-.32);
+      g.fillStyle='#ffd25a';g.beginPath();g.moveTo(-100,10);g.quadraticCurveTo(0,-62,100,-8);g.quadraticCurveTo(0,52,-100,10);g.fill();
+      g.strokeStyle='#1a0202';g.lineWidth=11;g.stroke();
+      g.strokeStyle='rgba(200,20,10,.7)';g.lineWidth=2;for(let k=0;k<6;k++){g.beginPath();g.moveTo(-80+k*30,6);g.lineTo(-60+k*30,-14+k%2*20);g.stroke();}
+      g.fillStyle='#b00804';g.beginPath();g.arc(0,2,24,0,TAU);g.fill();g.fillStyle='#120000';g.beginPath();g.ellipse(0,2,7,22,0,0,TAU);g.fill();
+      g.fillStyle='#ffd27a';g.beginPath();g.moveTo(sd*96,-6);g.quadraticCurveTo(sd*150,-40,sd*190,-30);g.quadraticCurveTo(sd*150,-10,sd*100,8);g.fill();
+      g.restore();
+    }
+    g.save();g.translate(cx,236);g.fillStyle='#ffe28a';g.beginPath();g.ellipse(0,0,16,40,0,0,TAU);g.fill();g.strokeStyle='#1a0202';g.lineWidth=6;g.stroke();
+    g.fillStyle='#c00a04';g.beginPath();g.ellipse(0,0,6,26,0,0,TAU);g.fill();g.restore();
+    // 宽鼻
+    g.fillStyle='#2a0404';g.beginPath();g.ellipse(cx-50,520,40,26,0,0,TAU);g.ellipse(cx+50,520,40,26,0,0,TAU);g.fill();
+    // 上颚獠牙
+    g.fillStyle='#fff1d2';
+    for(let i=-5;i<=5;i++){const x=cx+i*62,long=Math.abs(i)===3?150:70;g.beginPath();g.moveTo(x-24,600);g.lineTo(x+24,600);g.lineTo(x,600+long*.27);g.closePath();g.fill();}
+    for(const s of [-1,1]){g.beginPath();g.moveTo(cx+s*200,590);g.lineTo(cx+s*250,590);g.lineTo(cx+s*226,640);g.closePath();g.fill();}
+  });
+  const taotieJaw=paint(1024,384,(g,w,h)=>{
+    const cx=w/2;
+    const jaw=g.createLinearGradient(0,0,0,h);jaw.addColorStop(0,'#3a0604');jaw.addColorStop(1,'#120202');
+    g.fillStyle=jaw;g.beginPath();g.moveTo(cx-400,0);g.lineTo(cx+400,0);g.bezierCurveTo(cx+380,260,cx+200,370,cx,374);g.bezierCurveTo(cx-200,370,cx-380,260,cx-400,0);g.fill();
+    g.strokeStyle='#e0a848';g.lineWidth=10;g.stroke();
+    g.fillStyle='#5a0000';g.beginPath();g.ellipse(cx,40,330,70,0,0,PI);g.fill();
+    g.fillStyle='#fff1d2';
+    for(let i=-5;i<=5;i++){const x=cx+i*60,long=Math.abs(i)===4?120:60;g.beginPath();g.moveTo(x-24,long+14);g.lineTo(x+24,long+14);g.lineTo(x,4);g.closePath();g.fill();}
+    bronzeLines(g,w,h*1.2,'rgba(255,200,110,.4)');
+  });
+  const smoke=paint(256,256,(g,w,h)=>{
+    g.translate(w/2,h/2);
+    for(let i=0;i<70;i++){const a=between(0,TAU),r=between(10,110),rad=between(14,40);
+      const c=g.createRadialGradient(Math.cos(a)*r,Math.sin(a)*r,0,Math.cos(a)*r,Math.sin(a)*r,rad);
+      c.addColorStop(0,i%4?'rgba(20,0,0,.55)':'rgba(150,10,6,.5)');c.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=c;g.fillRect(-w/2,-h/2,w,h);}
+  });
   function maw(getPos,life=1.1){
-    track(life+.5,fx=>{
+    track(life+.6,fx=>{
       const head=new THREE.Group();fx.group.add(head);
-      const gum=basic(fx,0x7a0a0a,false),fang=basic(fx,0xfff2dc,false),glowRed=glow(fx,head,v3(0,0,-.3),0xff2a10);
-      const jaws=[1,-1].map(side=>{
-        const jaw=new THREE.Group();head.add(jaw);
-        const arc=new THREE.Mesh(fx.own(new THREE.TorusGeometry(2.1,.34,8,28,PI)),gum);arc.rotation.z=side>0?0:PI;jaw.add(arc);
-        for(let i=1;i<8;i++){const a=PI*i/8,tooth=new THREE.Mesh(fx.own(new THREE.ConeGeometry(.17,.75,6)),fang);
-          tooth.position.set(Math.cos(a)*2.1,side*Math.sin(a)*2.1-side*.38,0);tooth.rotation.z=side>0?PI:0;jaw.add(tooth);}
-        return {jaw,side};
-      });
+      const smokeA=mesh(head,ground,basic(fx,0xffffff,false,smoke),0,-.2,-.6,9,9,1),smokeB=mesh(head,ground,basic(fx,0xffffff,false,smoke),0,-.4,-.5,7,7,1);
+      const aura=glow(fx,head,v3(0,0,-.4),0xff2a10);
+      const top=mesh(head,ground,basic(fx,0xffffff,false,taotieTop),0,1.2,0,6.4,4,1);
+      const jawPivot=new THREE.Group();jawPivot.position.set(0,-.75,.05);head.add(jawPivot);
+      const jaw=mesh(jawPivot,ground,basic(fx,0xffffff,false,taotieJaw),0,-1.1,0,5.2,1.95,1);
+      const eyes=[-1,1].map(s=>glow(fx,head,v3(s*1.19,1.3,.1),0xffb040));
+      const parts=[smokeA,smokeB,top,jaw];
       fx.step=t=>{
-        const p=getPos(),u=t/life,open=smooth(0,.3,u),bite=smooth(.62,.78,u),gone=smooth(1,1.35,u);
-        head.position.copy(p);head.position.y+=.4;
-        if(camera)head.quaternion.copy(camera.quaternion);
-        head.scale.setScalar((.4+.75*open)*(1+.5*gone));
-        for(const {jaw,side} of jaws)jaw.position.y=side*(1.8*(1-bite)+.05);
-        gum.opacity=fang.opacity=1-gone;glowRed.scale.setScalar(6*open);glowRed.material.opacity=.7*open*(1-gone);
-        if(u>=.78&&!fx.bit){fx.bit=true;blast(p.clone().setY(0),0xff2a10,3.6,.5);sparks(p.clone(),60,0x8a0606,6,.8,6);feedback('devour',.8);}
+        const p=getPos(),u=t/life,rise=smooth(0,.25,u),gape=smooth(.15,.55,u),bite=smooth(.68,.76,u),gone=smooth(1,1.45,u);
+        head.position.copy(p);head.position.y+=.8;if(camera)head.quaternion.copy(camera.quaternion);
+        const pulse=1+.04*Math.sin(t*30)*gape*(1-bite);
+        head.scale.setScalar((.25+.45*rise)*pulse*(1+.3*gone));
+        // 下颚：张到最大后在一瞬间合死，再往上一顶。
+        jawPivot.position.y=-.75-2.1*gape*(1-bite)+.25*bite*(1-gone);
+        smokeA.rotation.z=t*1.8;smokeB.rotation.z=-t*2.6;
+        for(const m of parts)m.material.opacity=rise*(1-gone);
+        smokeA.material.opacity*=.9;smokeB.material.opacity*=.75;
+        aura.scale.setScalar(9*rise);aura.material.opacity=.55*rise*(1-gone);
+        for(const e of eyes){e.scale.setScalar(1.6+2.4*bite*(1-gone)+.4*Math.sin(t*20));e.material.opacity=rise*(1-gone);}
+        if(u>=.76&&!fx.bit){fx.bit=true;const g=p.clone().setY(0);blast(g,0xff2a10,4.5,.55);blast(g,0x2a0000,6,.8);
+          sparks(p.clone().setY(p.y+1),90,0x9a0806,7,.9,5);sparks(p.clone().setY(p.y+1),40,0xffc860,5,.6,6);feedback('devour',1.2);feedback('thunder',.6);}
       };
-      for(const m of [gum,fang])m.transparent=true;
     });
   }
   // 朱笔勾名：每个被勾名的阴差头顶压下一枚朱红「勾」字，脚下溅开朱墨。
