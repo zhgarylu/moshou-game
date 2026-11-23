@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#151e1e"><link rel="icon" href="data:,">
+<title>剑诀天师 · 木傩 | 道法世界</title><link rel="stylesheet" href="./nuo/style.css">
+</head><body>
+<header><a class="brand" href="./"><b>道</b><span>道法世界</span></a><span class="divider"></span><span class="trail">义庄 · 角色试装</span><a class="back" href="./actors.html?role=sword">返回角色图鉴 <span aria-hidden="true">↗</span></a></header>
+<main>
+ <nav id="cast" aria-label="选择试装角色"></nav>
+ <section class="stage" aria-label="傩面剑诀天师的实时三维预览">
+  <canvas id="stage" tabindex="0" aria-label="拖动环视剑诀天师，滚轮或双指缩放，方向键调整角度"></canvas>
+  <div class="caption"><span>槐阴义庄</span><h1>剑诀天师</h1><p>黑漆木傩面</p></div>
+  <div class="lens" aria-label="镜头距离"><button data-lens="close" aria-pressed="true">面部</button><button data-lens="body" aria-pressed="false">动作全景</button><button data-lens="field" aria-pressed="false">实战距离</button></div>
+  <div class="status" role="status">正在载入义庄…</div>
+  <div class="angles" aria-label="观察角度"><button data-angle="front">正脸</button><button data-angle="left">左侧</button><button data-angle="right">右侧</button><button data-angle="back">背面</button><span></span><button id="orbit" aria-pressed="false">环视</button></div>
+ </section>
+ <section class="transport" aria-label="起剑动作播放">
+  <button id="play" disabled><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">播放起剑</span></button>
+  <div class="scrub"><label for="timeline">无特效起剑</label><output id="time" for="timeline">0.00 / 2.00 秒</output><input type="range" id="timeline" min="0" max="2" step="0.005" value="0" aria-label="起剑动作进度" disabled></div>
+  <div class="speed" aria-label="播放速度"><button data-speed="1" aria-pressed="true">常速</button><button data-speed="0.25" aria-pressed="false">¼ 慢放</button></div>
+ </section>
+</main><script type="module" src="./nuo/preview.js"></script></body></html>

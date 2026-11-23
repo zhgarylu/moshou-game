@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101719">
+<title>道法世界 · 义庄惊雷</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='5' y='5' width='54' height='54' rx='4' fill='%239a3827'/%3E%3Ctext x='32' y='45' text-anchor='middle' fill='%23ffe5aa' font-family='serif' font-size='39'%3E道%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body data-mode="title">
+<main id="stage">
+<div id="cover"></div><div id="world"></div><div id="shade"></div><div id="hurt"></div><div id="dust" aria-hidden="true"></div>
+<header>
+  <div class="brand"><span class="brand-seal" aria-hidden="true">道</span><span class="brand-name">道法世界<small>DAOFA WORLD</small></span></div>
+  <div class="top-actions"><button id="sound" class="icon-button" title="声音" aria-label="切换声音" aria-pressed="true"><span data-icon="sound"></span></button><button id="help" class="icon-button" title="操作指南" aria-label="操作指南"><span data-icon="help"></span></button><button id="pause" class="icon-button" title="暂停" aria-label="暂停" hidden><span data-icon="pause"></span></button></div>
+</header>
+<section id="menu">
+  <div class="hero-copy">
+    <div class="chapter"><i></i> 槐阴镇 <b>◆</b> 子时</div>
+    <h1>义庄惊雷</h1>
+    <div class="trial">黑白无常<span></span>九十秒镇邪试炼</div>
+    <div class="disciplines" role="group" aria-label="选择出战职业">
+      <button data-class="thunder" aria-pressed="true"><img src="./nuo/portraits/thunder.webp" alt=""><span>雷法天师</span></button>
+      <button data-class="sword" aria-pressed="false"><img src="./nuo/portraits/sword.webp" alt=""><span>剑诀天师</span></button>
+      <button data-class="ward" aria-pressed="false"><img src="./nuo/portraits/ward.webp" alt=""><span>镇坛天师</span></button>
+    </div>
+    <p id="intro">以符为引，落雷破阵。黑白无常已至义庄。</p>
+    <button class="vermillion" id="start"><span class="play-triangle"></span><span>入庄镇邪</span></button>
+    <a class="actor-entry" href="./nuo.html">实战角色</a>
+    <div class="entry-status" id="loading" role="status"></div>
+  </div>
+  <div class="grimoire">
+    <div class="grimoire-heading"><span class="tiny-diamond"></span><h2>镇邪法门</h2><i></i></div>
+    <div class="spells-list">
+      <button class="lore" data-lore="thunder"><canvas width="80" height="80" data-rune="thunder"></canvas><span><strong>五雷正法</strong><small>五雷连降 · 范围攻伐</small></span><kbd>R</kbd></button>
+      <button class="lore" data-lore="summon"><canvas width="80" height="80" data-rune="summon"></canvas><span><strong>钟馗降临</strong><small>三印请神 · 镇压群邪</small></span><kbd>Q</kbd></button>
+      <button class="lore" data-lore="priest"><canvas width="80" height="80" data-rune="ritual"></canvas><span><strong>七星伏魔</strong><small>一眉道长 · 踏罡封符</small></span><kbd>E</kbd></button>
+    </div>
+  </div>
+</section>
+<section id="battle" hidden>
+  <div class="vitals"><span class="vital-name">雷法天师</span><span id="life-text"></span><div class="meter"><i id="life"></i></div></div>
+  <div class="clock"><small id="phase">第一更 · 开棺</small><b id="time">01:30</b><span>守住义庄</span></div>
+  <div class="kill-tally">已镇邪 <b id="kills">0</b></div>
+  <div id="duo" aria-label="无常生命">
+    <div data-foe="black" hidden><span>黑无常</span><i></i></div><div data-foe="white" hidden><span>白无常</span><i></i></div>
+  </div>
+  <div class="target-indicator" id="target-tag" hidden><i></i><span></span><em></em></div>
+  <div id="cast-banner" aria-live="polite"><small></small><b></b></div>
+  <div id="notice" role="status"></div>
+  <div class="battle-bottom">
+    <div class="aim-help">WASD 移动　·　拖动转向　·　单击发符</div>
+    <nav class="hotbar" aria-label="战斗技能">
+      <button data-skill="mark"><canvas data-rune="mark" width="80" height="80"></canvas><kbd>1</kbd><strong>镇尸符</strong><em></em></button>
+      <button data-skill="chain"><canvas data-rune="chain" width="80" height="80"></canvas><kbd>2</kbd><strong>引连雷</strong><em></em></button>
+      <button data-skill="thunder"><canvas data-rune="thunder" width="80" height="80"></canvas><kbd>R</kbd><strong>五雷正法</strong><em></em></button>
+      <button data-skill="summon"><canvas data-rune="summon" width="80" height="80"></canvas><kbd>Q</kbd><strong>请钟馗</strong><em></em></button>
+      <button data-skill="priest"><canvas data-rune="ritual" width="80" height="80"></canvas><kbd>E</kbd><strong>七星伏魔</strong><em></em></button>
+      <button data-skill="dodge"><canvas data-rune="dodge" width="80" height="80"></canvas><kbd>空格</kbd><strong>踏罡步</strong><em></em></button>
+    </nav>
+    <div id="condition" role="status"></div><div id="seals">天师印　◆ ◆ ◆</div>
+  </div>
+  <div id="joystick" aria-label="移动"><i></i></div>
+</section>
+<section id="dialog" hidden role="dialog" aria-modal="true" aria-labelledby="dialog-title"><div class="dialog-card"><div class="dialog-kicker" id="dialog-kicker"></div><h2 id="dialog-title"></h2><div id="dialog-body"></div><div class="dialog-actions" id="dialog-actions"></div></div></section>
+</main>
+<script type="module" src="./interface.js"></script>
+</body></html>

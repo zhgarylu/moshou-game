@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#142023"><link rel="icon" href="data:,">
+<title>角色图鉴 · 道法世界</title><link rel="stylesheet" href="./actors.css">
+</head>
+<body>
+<header><a class="brand" href="./"><i>道</i><b>道法世界</b></a><span class="bar"></span><h1>角色图鉴</h1><a class="back" href="./">返回义庄</a></header>
+<main>
+ <nav id="roster" aria-label="选择角色"></nav>
+ <section class="exhibit">
+   <div class="title"><div><small id="type"></small><h2 id="name"></h2></div><div class="display-tools"><a id="nuo-entry" href="./nuo.html" hidden>义庄试装</a><button id="fx-preview" aria-pressed="false" hidden>法术同演</button><button id="compare" aria-pressed="false">原画对照</button></div></div>
+   <div id="panels">
+     <figure id="ref-pane" hidden><figcaption id="ref-tag">定稿原画</figcaption><canvas id="reference" role="img" aria-label="角色定稿"></canvas></figure>
+     <figure id="model-pane"><figcaption>实时模型</figcaption><canvas id="model" tabindex="0" aria-label="三维角色，可拖动旋转，滚轮缩放"></canvas><div id="message" role="status">正在载入角色…</div></figure>
+   </div>
+   <div class="controls"><div class="views" aria-label="模型视角"><button data-view="front" aria-pressed="true">前侧</button><button data-view="side">左侧</button><button data-view="back">背面</button><button data-view="right">右侧</button><button data-view="face">面部</button><button id="orbit" aria-pressed="false">环视</button></div>
+   <label><span>动作</span><select id="motion"><option value="reference">定稿站姿</option><option value="guard">垂手守坛</option><option value="idle">待机</option><option value="walk">移动</option><option value="attack">出招</option><option value="cast">施法</option><option value="ultimate">职业大招</option><option value="invoke">请钟馗</option><option value="dodge">踏罡步</option><option value="charge">锁链冲撞</option></select></label></div>
+   <p class="hint">拖动旋转，滚轮或双指缩放</p>
+ </section>
+</main>
+<script type="module" src="./actors.js"></script>
+</body></html>
