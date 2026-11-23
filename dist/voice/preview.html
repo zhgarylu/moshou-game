@@ -38,6 +38,28 @@ fetch('./index.json',{cache:'no-store'}).then(r=>r.json()).then(index=>{
     }
   }
 });
+// 候选试配：tools/build-voices.mjs --audition 生成，每个候选一组，点组名连播该候选的全部台词。
+fetch('./audition/index.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).then(rows=>{
+  if(!rows.length)return;
+  const list=document.getElementById('list'),head=document.createElement('h2');
+  head.textContent='候选对比 · 点组名连播';head.style.cssText='color:#ffd99a;font-size:15px;margin-top:6px';list.prepend(head);
+  const roles={priest:'一眉道长',judge:'钟馗'};let anchor=head;
+  for(const role of [...new Set(rows.map(r=>r.role))]){
+    for(const option of [...new Set(rows.filter(r=>r.role===role).map(r=>r.option))]){
+      const items=rows.filter(r=>r.role===role&&r.option===option);
+      const h=document.createElement('h2');h.textContent=(roles[role]||role)+' · 候选 '+(option+1)+' · '+items[0].name+'  ▶';h.style.cursor='pointer';
+      anchor.after(h);anchor=h;const made=[];
+      for(const r of items){
+        const row=document.createElement('div');row.className='row';row.dataset.file=r.file;
+        row.innerHTML='<span>'+r.dur.toFixed(1)+'s</span><b></b><small></small>';
+        row.querySelector('b').textContent=r.text;row.querySelector('small').textContent=r.name;
+        row.onclick=()=>{queue=[];play(row);};anchor.after(row);anchor=row;made.push(row);
+      }
+      h.onclick=()=>{queue=[...made];play(queue.shift());};
+    }
+  }
+  const tail=document.createElement('h2');tail.textContent='当前游戏内配音';tail.style.cssText='color:#ffd99a;font-size:15px;margin-top:26px';anchor.after(tail);
+});
 function play(row){
   current?.classList.remove('on');current=row;row.classList.add('on');
   audio.src='./'+row.dataset.file;audio.play();

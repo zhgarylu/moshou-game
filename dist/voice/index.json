@@ -106,17 +106,17 @@
  },
  "judge.arrive": {
   "file": "judge-arrive.mp3",
-  "dur": 1.564,
+  "dur": 1.558,
   "text": "何方妖孽！"
  },
  "judge.slash": {
   "file": "judge-slash.mp3",
-  "dur": 1.016,
+  "dur": 1.375,
   "text": "斩！"
  },
  "priest.invoke": {
   "file": "priest-invoke.mp3",
-  "dur": 3.861,
+  "dur": 3.551,
   "text": "北斗七星，伏魔镇邪。敕！"
  },
  "black.enter": {

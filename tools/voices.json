@@ -4,8 +4,8 @@
     "thunder": "zh_male_qingcang_uranus_bigtts",
     "sword":   "zh_female_gufengshaoyu_uranus_bigtts",
     "ward":    "zh_male_baqiqingshu_uranus_bigtts",
-    "judge":   "zh_male_shenyeboke_uranus_bigtts",
-    "priest":  "zh_male_zhuangzhou_uranus_bigtts",
+    "judge":   "zh_male_baqiqingshu_uranus_bigtts",
+    "priest":  "zh_male_baqiqingshu_uranus_bigtts",
     "black":   "zh_male_xuanyijieshuo_uranus_bigtts",
     "white":   "zh_male_youyoujunzi_uranus_bigtts"
   },
@@ -31,9 +31,9 @@
     "ward.rice":        {"rate": 5,   "text": "糯米，镇尸！"},
     "ward.win":         {"rate": -5,  "text": "义庄已安。"},
     "ward.hurt":        {"rate": 10,  "text": "顶住！"},
-    "judge.arrive":     {"rate": 20, "fx": "deity", "text": "何方妖孽！"},
-    "judge.slash":      {"rate": -5,  "fx": "deity", "text": "斩！"},
-    "priest.invoke":    {"rate": -5,  "fx": "elder", "text": "北斗七星，伏魔镇邪。敕！"},
+    "judge.arrive":     {"rate": 20,  "fx": "hell3", "instruct": "地狱霸主降临人间，声音低沉而有威压，暴怒咆哮，震慑群鬼", "text": "何方妖孽！"},
+    "judge.slash":      {"rate": -5,  "fx": "hell3", "instruct": "地狱霸主降临人间，声音低沉而有威压，暴怒咆哮，震慑群鬼", "text": "斩！"},
+    "priest.invoke":    {"rate": 0,   "fx": "roar", "instruct": "坚毅威严，声如洪钟，运足中气大声喝令，要把恶鬼吓退", "text": "北斗七星，伏魔镇邪。敕！"},
     "black.enter":      {"rate": -20, "fx": "ghost", "text": "拿命来……"},
     "white.enter":      {"rate": -5, "fx": "ghost", "text": "勾魂……索命……"}
   }
